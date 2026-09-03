@@ -18,10 +18,18 @@ outputs; the deck's link graph decides what feeds what.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5199
 npm test           # 97 unit + integration tests
 npm run build      # typecheck + production build
+npm run preview    # serve the production build on :5200
 ```
+
+The dev server deliberately avoids Vite's default 5173, which another project is
+usually already sitting on. Override with `npm run dev -- --port 4000` if 5199 is
+taken. If a stale app still appears at the URL, it is a service worker or cache
+from whatever ran on that port before — hard-reload, or clear site data for that
+origin in DevTools → Application → Storage. The page title should read
+`CYBER DEX // MODULAR TRADING OS`.
 
 First launch offers **CONNECT WALLET** or **EXPLORE DEMO**. Demo mode simulates market
 data and transactions, and labels every simulated value as such.
