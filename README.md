@@ -98,7 +98,10 @@ and loads when a deck first places it.
 
 ## Trading safety
 
-- The swap terminal is the only `EXECUTION_CAPABLE` module.
+- The swap terminal is the only `EXECUTION_CAPABLE` module. Its two sides follow the
+  linked pair by default; flipping the direction or picking a token pins the module (shown
+  as `PINNED ↺`, one click to follow the pair again), and a token wired into TOKEN A or
+  TOKEN B always wins over a local pick.
 - Flow is quote → review → explicit confirm. `ExecutionService` refuses a trade that
   skips review, was not confirmed, still needs an approval, or carries a blocking warning.
 - A **watch wallet** can never sign; the guard is in the service, not the UI.

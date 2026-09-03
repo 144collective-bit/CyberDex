@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ModuleInstance } from '../../core/modules/types';
 import type { PairRef, Quote, TokenRef, TxRecord, WalletRecord } from '../../core/types';
 import { SimulatedTag, Warning } from '../../components/ui/States';
-import { Button } from '../../components/ui/Button';
+import { Button, IconButton } from '../../components/ui/Button';
 import { Segmented } from '../../components/ui/Segmented';
 import { TokenPicker } from '../../components/ui/TokenPicker';
 import type { PreparedTrade } from '../../services/execution/ExecutionService';
 import type { RoutingResult } from '../../services/dex/RoutingEngine';
-import { findToken } from '../../services/market/tokens';
+import { resolveSwapTokens } from '../swapTokens';
 import { useActiveWallet, useGlobalContext, useSystem } from '../../state/system';
 import { usePortfolio } from '../../state/marketHooks';
 import { useModuleConfig, useModuleInputs, useModuleOutputs } from '../../state/moduleIO';
@@ -17,6 +17,9 @@ interface Config extends Record<string, unknown> {
   slippagePct: number;
   amount: string;
   adapterId: string;
+  /** Tokens pinned on this module, overriding the pair it would otherwise follow. */
+  sellSymbol: string | null;
+  buySymbol: string | null;
 }
 
 type Stage = 'edit' | 'review' | 'working';
@@ -45,18 +48,15 @@ export function Component({ module }: { module: ModuleInstance }) {
   const wallet = (inputs.wallet as WalletRecord | undefined) ?? activeWallet;
   const chainId = wallet?.chainId ?? global.chainId;
 
-  const sell =
-    (inputs.tokenA as TokenRef | undefined) ??
-    linkedPair?.base ??
-    global.pair?.base ??
-    findToken(chainId, 'HEX') ??
-    null;
-  const buy =
-    (inputs.tokenB as TokenRef | undefined) ??
-    linkedPair?.quote ??
-    global.pair?.quote ??
-    findToken(chainId, 'PLS') ??
-    null;
+  const { sell, buy, sellLocked, buyLocked, pinned } = resolveSwapTokens({
+    chainId,
+    linkedSell: inputs.tokenA as TokenRef | undefined,
+    linkedBuy: inputs.tokenB as TokenRef | undefined,
+    linkedPair,
+    globalPair: global.pair,
+    sellOverride: config.sellSymbol,
+    buyOverride: config.buySymbol,
+  });
 
   const linkedAmount = inputs.amount as number | undefined;
   const linkedSlippage = inputs.slippage as number | undefined;
@@ -116,6 +116,26 @@ export function Component({ module }: { module: ModuleInstance }) {
     transaction: submitted,
     amountOut: quote?.amountOut ?? null,
   });
+
+  /**
+   * Swap the two sides. The old estimated receive becomes the new sell amount,
+   * which is what every trading UI does — and pins both tokens, since the
+   * module can no longer be following its pair in the original order.
+   */
+  const flip = useCallback(() => {
+    if (!sell || !buy) return;
+    setConfig({
+      sellSymbol: buy.symbol,
+      buySymbol: sell.symbol,
+      amount: quote ? String(Number(quote.amountOut.toPrecision(8))) : '',
+    });
+    setRouting(null);
+  }, [sell, buy, quote, setConfig]);
+
+  const followPair = useCallback(() => {
+    setConfig({ sellSymbol: null, buySymbol: null });
+    setRouting(null);
+  }, [setConfig]);
 
   const review = useCallback(async () => {
     if (!quote) return;
@@ -195,7 +215,24 @@ export function Component({ module }: { module: ModuleInstance }) {
     <>
       <div className="col" style={{ gap: 'var(--space-2)' }}>
         <div className="spread">
-          <span className="label">SELL</span>
+          <span className="row" style={{ gap: 'var(--space-2)' }}>
+            <span className="label">SELL</span>
+            {pinned ? (
+              <button
+                type="button"
+                className="chip"
+                data-tone="accent"
+                title="Pinned to these tokens — click to follow the linked pair again"
+                onClick={followPair}
+              >
+                PINNED ↺
+              </button>
+            ) : linkedPair ? (
+              <span className="chip" title="Following the linked pair selector">
+                FOLLOWING {linkedPair.label}
+              </span>
+            ) : null}
+          </span>
           <span className="faint" style={{ fontSize: 'var(--text-3xs)' }}>
             BALANCE {sellBalance ? formatAmount(sellBalance.amount) : '—'} {sell.symbol}
           </span>
@@ -205,8 +242,9 @@ export function Component({ module }: { module: ModuleInstance }) {
             <TokenPicker
               chainId={chainId}
               value={sell}
-              onChange={() => undefined}
-              disabled
+              exclude={buy}
+              onChange={(token) => setConfig({ sellSymbol: token.symbol })}
+              disabled={sellLocked}
             />
           </div>
           <input
@@ -233,15 +271,34 @@ export function Component({ module }: { module: ModuleInstance }) {
         </div>
       </div>
 
-      <div className="row" style={{ justifyContent: 'center' }}>
-        <span className="chip" data-tone="accent">↓</span>
+      <div className="swap-flip">
+        <span className="swap-flip-rule" aria-hidden />
+        <IconButton
+          label={
+            sellLocked && buyLocked
+              ? 'Direction is set by the linked tokens'
+              : `Flip direction — sell ${buy.symbol} for ${sell.symbol}`
+          }
+          size="md"
+          disabled={sellLocked && buyLocked}
+          onClick={flip}
+        >
+          ⇅
+        </IconButton>
+        <span className="swap-flip-rule" aria-hidden />
       </div>
 
       <div className="col" style={{ gap: 'var(--space-2)' }}>
         <span className="label">BUY</span>
         <div className="row" style={{ gap: 'var(--space-2)' }}>
           <div style={{ width: 108 }}>
-            <TokenPicker chainId={chainId} value={buy} onChange={() => undefined} disabled />
+            <TokenPicker
+              chainId={chainId}
+              value={buy}
+              exclude={sell}
+              onChange={(token) => setConfig({ buySymbol: token.symbol })}
+              disabled={buyLocked}
+            />
           </div>
           <div className="input grow mono-num" style={{ display: 'flex', alignItems: 'center' }}>
             {quoting && !quote ? '…' : quote ? formatAmount(quote.amountOut) : '0.0'}

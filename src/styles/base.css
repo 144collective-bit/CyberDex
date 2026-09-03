@@ -152,6 +152,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .icon-btn[data-tone='danger']:hover { color: var(--error); border-color: var(--error); background: var(--error-wash); }
 .icon-btn[data-size='md'] { width: 22px; height: 22px; font-size: var(--text-xs); }
 
+/* Swap direction control: a button sitting on the rule between the two sides. */
+.swap-flip { display: flex; align-items: center; gap: var(--space-3); }
+.swap-flip-rule { flex: 1 1 auto; height: 1px; background: var(--border-faint); }
+.swap-flip .icon-btn {
+  border-color: var(--border);
+  background: var(--surface-sunken);
+  color: var(--accent);
+  border-radius: 50%;
+}
+.swap-flip .icon-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  box-shadow: var(--glow-soft);
+}
+.swap-flip .icon-btn:disabled { color: var(--text-muted); }
+
 /* ---- segmented control ---- */
 .segmented {
   display: inline-flex;

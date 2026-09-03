@@ -185,7 +185,8 @@ export const chartModule = define({
 export const swapModule = define({
   type: MODULE_TYPES.swap,
   name: 'SWAP TERMINAL',
-  version: '1.0.0',
+  // 1.1.0 added local token pinning + direction flip (sellSymbol / buySymbol).
+  version: '1.1.0',
   category: 'TRADING',
   icon: '⇅',
   description: 'Quote, review and execute a swap. Every execution requires explicit confirmation.',
@@ -205,7 +206,13 @@ export const swapModule = define({
   ],
   defaultSize: { width: 340, height: 440 },
   minSize: { width: 300, height: 340 },
-  defaultConfig: { slippagePct: 0.5, amount: '', adapterId: 'auto' },
+  defaultConfig: {
+    slippagePct: 0.5,
+    amount: '',
+    adapterId: 'auto',
+    sellSymbol: null as string | null,
+    buySymbol: null as string | null,
+  },
   keywords: ['swap', 'trade', 'buy', 'sell', 'execute'],
 });
 
