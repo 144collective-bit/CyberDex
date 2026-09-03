@@ -1,6 +1,8 @@
 import { STORAGE_KEYS } from '../core/storage/PersistenceAdapter';
 import { useActiveDeck, useDeckActions } from '../state/deck';
 import { useGlobalContext, useSystem } from '../state/system';
+import { Button } from '../components/ui/Button';
+import { Segmented } from '../components/ui/Segmented';
 
 const THEMES = [
   { id: 'cyber-dark', label: 'CYBER DARK' },
@@ -28,55 +30,51 @@ export function SettingsPage() {
         <h2>APPEARANCE</h2>
         <div className="col" style={{ gap: 'var(--space-3)' }}>
           <span className="label">THEME</span>
-          <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-            {THEMES.map((theme) => (
-              <button
-                key={theme.id}
-                type="button"
-                className="btn"
-                data-active={global.theme === theme.id}
-                onClick={() => globalStore.set({ theme: theme.id })}
-              >
-                {theme.label}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="Theme"
+            size="md"
+            value={global.theme}
+            options={THEMES.map((theme) => ({ value: theme.id, label: theme.label }))}
+            onChange={(theme) => globalStore.set({ theme })}
+          />
           <span className="label">DATA DENSITY</span>
-          <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-            {(['compact', 'normal', 'comfortable'] as const).map((density) => (
-              <button
-                key={density}
-                type="button"
-                className="btn"
-                data-active={global.density === density}
-                onClick={() => globalStore.set({ density })}
-              >
-                {density.toUpperCase()}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="Data density"
+            size="md"
+            value={global.density}
+            options={[
+              { value: 'compact', label: 'COMPACT', hint: 'Default — most rows per screen' },
+              { value: 'normal', label: 'NORMAL' },
+              { value: 'comfortable', label: 'COMFORTABLE' },
+            ]}
+            onChange={(density) => globalStore.set({ density })}
+          />
         </div>
       </section>
 
       <section className="card">
         <h2>ACTIVE DECK · {deck.name}</h2>
-        <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-          <button
-            type="button"
-            className="btn"
-            data-active={deck.settings.snapToGrid}
-            onClick={() => actions.updateSettings({ snapToGrid: !deck.settings.snapToGrid })}
-          >
-            GRID SNAP {deck.settings.snapToGrid ? 'ON' : 'OFF'}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            data-active={deck.settings.showLinks}
-            onClick={() => actions.updateSettings({ showLinks: !deck.settings.showLinks })}
-          >
-            DATA LINES {deck.settings.showLinks ? 'ON' : 'OFF'}
-          </button>
+        <div className="row wrap" style={{ gap: 'var(--space-5)' }}>
+          <Segmented
+            label="Grid snap"
+            size="md"
+            value={deck.settings.snapToGrid ? 'on' : 'off'}
+            options={[
+              { value: 'on', label: 'GRID SNAP' },
+              { value: 'off', label: 'FREE' },
+            ]}
+            onChange={(value) => actions.updateSettings({ snapToGrid: value === 'on' })}
+          />
+          <Segmented
+            label="Data lines"
+            size="md"
+            value={deck.settings.showLinks ? 'on' : 'off'}
+            options={[
+              { value: 'on', label: 'DATA LINES' },
+              { value: 'off', label: 'HIDDEN' },
+            ]}
+            onChange={(value) => actions.updateSettings({ showLinks: value === 'on' })}
+          />
           <label className="row" style={{ gap: 'var(--space-2)' }}>
             <span className="label">GRID SIZE</span>
             <input
@@ -89,9 +87,7 @@ export function SettingsPage() {
               onChange={(event) => actions.updateSettings({ gridSize: Number(event.target.value) || 20 })}
             />
           </label>
-          <button type="button" className="btn" onClick={() => void actions.save()}>
-            SAVE DECK NOW
-          </button>
+          <Button onClick={() => void actions.save()}>SAVE DECK NOW</Button>
         </div>
       </section>
 
@@ -118,10 +114,8 @@ export function SettingsPage() {
           </div>
         </div>
         <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-          <button
-            type="button"
-            className="btn"
-            data-variant="danger"
+          <Button
+            variant="danger"
             onClick={() => {
               void Promise.all(Object.values(STORAGE_KEYS).map((key) => system.storage.remove(key))).then(() =>
                 window.location.reload(),
@@ -129,7 +123,7 @@ export function SettingsPage() {
             }}
           >
             RESET LOCAL DATA
-          </button>
+          </Button>
         </div>
       </section>
 

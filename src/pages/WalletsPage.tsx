@@ -4,6 +4,7 @@ import { shortAddress } from '../services/wallet/WalletService';
 import { useActiveWallet, useGlobalContext, useSystem, useWalletState } from '../state/system';
 import { usePortfolio } from '../state/marketHooks';
 import { formatPct, formatUsd, formatRelative } from '../utils/format';
+import { Button } from '../components/ui/Button';
 
 export function WalletsPage() {
   const system = useSystem();
@@ -36,18 +37,12 @@ export function WalletsPage() {
           </p>
         </div>
         <div className="row wrap">
-          <button
-            type="button"
-            className="btn"
-            data-variant="primary"
-            disabled={state.connecting}
-            onClick={() => void system.wallets.connectInjected().catch((err) => setError(err.message))}
-          >
+          <Button variant="primary" disabled={state.connecting} onClick={() => void system.wallets.connectInjected().catch((err) => setError(err.message))}>
             {state.connecting ? 'CONNECTING…' : 'CONNECT BROWSER WALLET'}
-          </button>
-          <button type="button" className="btn" onClick={() => system.wallets.addDemoWallet()}>
+          </Button>
+          <Button onClick={() => system.wallets.addDemoWallet()}>
             LOAD DEMO VAULT
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -76,9 +71,9 @@ export function WalletsPage() {
             value={label}
             onChange={(event) => setLabel(event.target.value)}
           />
-          <button type="button" className="btn" onClick={addWatch} disabled={!address}>
+          <Button onClick={addWatch} disabled={!address}>
             ADD
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -102,24 +97,15 @@ export function WalletsPage() {
                 <span>ADDED {formatRelative(wallet.addedAt)} AGO</span>
               </div>
               <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-                <button
-                  type="button"
-                  className="btn"
-                  data-active={wallet.id === active?.id}
-                  onClick={() => system.wallets.setActive(wallet.id)}
-                >
+                <Button active={wallet.id === active?.id} onClick={() => system.wallets.setActive(wallet.id)}>
                   {wallet.id === active?.id ? 'ACTIVE' : 'ACTIVATE'}
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => void navigator.clipboard?.writeText(String(wallet.address))}
-                >
+                </Button>
+                <Button onClick={() => void navigator.clipboard?.writeText(String(wallet.address))}>
                   COPY
-                </button>
-                <button type="button" className="btn" data-variant="danger" onClick={() => system.wallets.disconnect(wallet.id)}>
+                </Button>
+                <Button variant="danger" onClick={() => system.wallets.disconnect(wallet.id)}>
                   {wallet.kind === 'injected' ? 'DISCONNECT' : 'REMOVE'}
-                </button>
+                </Button>
               </div>
             </article>
           ))}

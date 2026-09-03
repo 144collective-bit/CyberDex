@@ -5,6 +5,7 @@ import { LoadingState } from '../components/ui/States';
 import { NETWORKS, tokensForChain, makePair, findToken } from '../services/market/tokens';
 import { useGlobalContext, useSystem } from '../state/system';
 import { compactNumber, formatPct, formatPrice } from '../utils/format';
+import { Button } from '../components/ui/Button';
 
 export function MarketsPage({ onOpenDesk }: { onOpenDesk: () => void }) {
   const system = useSystem();
@@ -87,21 +88,16 @@ export function MarketsPage({ onOpenDesk }: { onOpenDesk: () => void }) {
                   <td className="num mono-num">${compactNumber(market.liquidityUsd)}</td>
                   <td className="num mono-num">${compactNumber(market.marketCapUsd)}</td>
                   <td className="num">
-                    <button
-                      type="button"
-                      className="btn"
-                      data-variant="ghost"
-                      onClick={() => {
+                    <Button variant="ghost" onClick={() => {
                         const quote =
                           findToken(global.chainId, market.token.symbol === 'PLS' ? 'HEX' : 'PLS') ?? market.token;
                         const pair = makePair(market.token, quote);
                         globalStore.set({ token: market.token, pair });
                         system.bus.emit('PAIR_CHANGED', { pair }, 'markets-page');
                         onOpenDesk();
-                      }}
-                    >
+                      }}>
                       TRADE
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}

@@ -3,6 +3,8 @@ import type { TxStatus } from '../core/types';
 import { shortAddress } from '../services/wallet/WalletService';
 import { useSystem, useTransactions } from '../state/system';
 import { formatRelative, formatTime } from '../utils/format';
+import { Button } from '../components/ui/Button';
+import { Segmented } from '../components/ui/Segmented';
 
 const TONE: Record<TxStatus, string> = {
   PENDING: 'warning',
@@ -31,21 +33,21 @@ export function TransactionsPage() {
           <h1>TRANSACTIONS</h1>
           <p className="faint">Simulated records are labelled and never presented as settled on-chain activity.</p>
         </div>
-        <div className="row wrap">
-          {(['all', 'live', 'simulated'] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              className="btn"
-              data-active={filter === key}
-              onClick={() => setFilter(key)}
-            >
-              {key.toUpperCase()}
-            </button>
-          ))}
-          <button type="button" className="btn" data-variant="danger" onClick={() => system.ledger.clear()}>
+        <div className="row wrap" style={{ gap: 'var(--space-4)' }}>
+          <Segmented
+            label="Transaction source"
+            size="md"
+            value={filter}
+            options={[
+              { value: 'all', label: 'ALL' },
+              { value: 'live', label: 'LIVE' },
+              { value: 'simulated', label: 'SIMULATED' },
+            ]}
+            onChange={setFilter}
+          />
+          <Button variant="danger" onClick={() => system.ledger.clear()}>
             CLEAR LEDGER
-          </button>
+          </Button>
         </div>
       </div>
 

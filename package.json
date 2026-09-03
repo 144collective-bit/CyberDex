@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "CYBER DEX \u2014 a modular DeFi trading operating system",
+  "description": "CYBER DEX — a modular DeFi trading operating system",
   "scripts": {
     "dev": "vite --port 5199",
     "build": "tsc -b && vite build",

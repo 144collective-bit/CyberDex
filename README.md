@@ -124,7 +124,19 @@ keys are backfilled from the current definition).
 
 Templates: **GENESIS · TRADER · PORTFOLIO · HEX COMMAND · WHALE HUNTER · BALANCE CIRCUIT**.
 
-## Keyboard
+## Controls and keyboard
+
+Every control in the app comes from one small set: `Button` / `IconButton`, `Segmented`
+for mutually exclusive choices, and `Menu` for dropdowns. Appearance is driven entirely by
+data attributes against design tokens, so themes and density need no component changes.
+
+- **Menus** (deck, network, wallet, module header) open on click or `Enter`/`↓`, move with
+  `↑ ↓ Home End`, select with `Enter`, close on `Esc` returning focus to the trigger, and
+  expose `menu`/`menuitem` roles.
+- **Segmented controls** (timeframes, filters, sort, slippage, theme, density) are radio
+  groups: `← →` moves between segments and carries focus with the selection.
+- **Rail** collapses to icons and shows each destination's name as a tooltip; the active
+  route gets a marker bar, not just a colour change.
 
 `⌘/Ctrl + K` command palette · `⌘/Ctrl + M` module library · `⌘/Ctrl + S` save deck ·
 `⌘/Ctrl + D` new deck · `Delete` remove selected module or link · `Esc` close.

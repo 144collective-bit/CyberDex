@@ -7,6 +7,7 @@ import { useGlobalContext } from '../../state/system';
 import { useTokenMarket } from '../../state/marketHooks';
 import { useModuleInputs, useModuleOutputs } from '../../state/moduleIO';
 import { compactNumber, formatPrice } from '../../utils/format';
+import { Button } from '../../components/ui/Button';
 
 export function Component({ module }: { module: ModuleInstance }) {
   const inputs = useModuleInputs(module.id);
@@ -39,15 +40,9 @@ export function Component({ module }: { module: ModuleInstance }) {
       <div className="col" style={{ gap: 2, fontSize: 'var(--text-3xs)' }}>
         <div className="spread">
           <span className="faint">CONTRACT</span>
-          <button
-            type="button"
-            className="btn"
-            data-variant="ghost"
-            style={{ minHeight: 16, maxWidth: '70%' }}
-            onClick={() => void navigator.clipboard?.writeText(String(token.address))}
-          >
+          <Button variant="ghost" style={{ minHeight: 16, maxWidth: '70%' }} onClick={() => void navigator.clipboard?.writeText(String(token.address))}>
             <span className="truncate mono-num">{token.address}</span>
-          </button>
+          </Button>
         </div>
         <div className="spread">
           <span className="faint">NETWORK</span>

@@ -7,6 +7,7 @@ import { useGlobalContext, useSystem } from '../../state/system';
 import { useTokenMarket } from '../../state/marketHooks';
 import { useModuleConfig, useModuleOutputs } from '../../state/moduleIO';
 import { formatPct, formatPrice } from '../../utils/format';
+import { IconButton } from '../../components/ui/Button';
 
 interface Config extends Record<string, unknown> {
   symbols: string[];
@@ -37,17 +38,12 @@ function WatchRow({
         {formatPct(market?.change24hPct ?? null)}
       </td>
       <td className="num">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label={`Remove ${token.symbol}`}
-          onClick={(event) => {
+        <IconButton label={`Remove ${token.symbol}`} onClick={(event) => {
             event.stopPropagation();
             onRemove();
-          }}
-        >
+          }}>
           ×
-        </button>
+        </IconButton>
       </td>
     </tr>
   );

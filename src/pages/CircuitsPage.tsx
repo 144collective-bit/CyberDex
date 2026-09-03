@@ -4,6 +4,7 @@ import type { Deck } from '../core/modules/types';
 import { MODULE_TYPES } from '../modules/definitions';
 import { useActiveDeck, useDeckActions } from '../state/deck';
 import { useSystem } from '../state/system';
+import { Button } from '../components/ui/Button';
 
 interface CircuitPreset {
   id: string;
@@ -196,9 +197,9 @@ export function CircuitsPage({ onOpenDesk }: { onOpenDesk: () => void }) {
                   </span>
                 ))}
               </div>
-              <button type="button" className="btn" data-variant="primary" onClick={() => build(preset)}>
+              <Button variant="primary" onClick={() => build(preset)}>
                 BUILD ON {deck.name}
-              </button>
+              </Button>
             </article>
           ))}
         </div>

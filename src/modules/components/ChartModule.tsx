@@ -3,6 +3,7 @@ import type { ModuleInstance } from '../../core/modules/types';
 import type { PairRef, Timeframe } from '../../core/types';
 import { TIMEFRAMES } from '../../core/types';
 import { CandleChart } from '../../components/ui/CandleChart';
+import { Segmented } from '../../components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/States';
 import { useGlobalContext } from '../../state/system';
 import { useOHLC } from '../../state/marketHooks';
@@ -35,34 +36,43 @@ export function Component({ module }: { module: ModuleInstance }) {
 
   const controls = useMemo(
     () => (
-      <div className="row" style={{ gap: 2, padding: 'var(--space-2) var(--space-3)', borderBottom: '1px solid var(--border-faint)' }}>
-        {TIMEFRAMES.map((tf) => (
-          <button
-            key={tf}
-            type="button"
-            className="btn"
-            data-variant="ghost"
-            data-active={timeframe === tf}
-            disabled={inputs.timeframe !== undefined}
-            onClick={() => setConfig({ timeframe: tf })}
-            style={{ minHeight: 18, padding: '0 var(--space-3)' }}
-          >
-            {tf}
-          </button>
-        ))}
+      <div
+        className="row"
+        style={{
+          gap: 'var(--space-3)',
+          padding: 'var(--space-2) var(--space-3)',
+          borderBottom: '1px solid var(--border-faint)',
+        }}
+      >
+        <Segmented
+          label="Timeframe"
+          value={timeframe}
+          disabled={inputs.timeframe !== undefined}
+          options={TIMEFRAMES.map((tf) => ({ value: tf, label: tf.toUpperCase() }))}
+          onChange={(tf) => setConfig({ timeframe: tf })}
+        />
         <span className="grow" />
-        <button
-          type="button"
-          className="btn"
-          data-variant="ghost"
-          onClick={() => setConfig({ style: config.style === 'candles' ? 'line' : 'candles' })}
-          style={{ minHeight: 18 }}
-        >
-          {config.style === 'candles' ? 'CANDLES' : 'LINE'}
-        </button>
+        <Segmented
+          label="Chart style"
+          value={config.style}
+          options={[
+            { value: 'candles', label: 'CANDLES' },
+            { value: 'line', label: 'LINE' },
+          ]}
+          onChange={(style) => setConfig({ style })}
+        />
+        <Segmented
+          label="Volume"
+          value={config.showVolume ? 'on' : 'off'}
+          options={[
+            { value: 'on', label: 'VOL' },
+            { value: 'off', label: 'OFF' },
+          ]}
+          onChange={(value) => setConfig({ showVolume: value === 'on' })}
+        />
       </div>
     ),
-    [timeframe, config.style, setConfig, inputs.timeframe],
+    [timeframe, config.style, config.showVolume, setConfig, inputs.timeframe],
   );
 
   if (!pair) {

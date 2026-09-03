@@ -3,6 +3,7 @@ import type { ModuleInstance } from '../../core/modules/types';
 import { Stat } from '../../components/ui/States';
 import { useModuleConfig, useModuleInputs, useModuleOutputs, isLinked } from '../../state/moduleIO';
 import { formatAmount } from '../../utils/format';
+import { Button } from '../../components/ui/Button';
 
 type Operation = 'percent' | 'multiply' | 'divide' | 'add' | 'subtract' | 'ratio' | 'roi';
 
@@ -76,18 +77,9 @@ export function Component({ module }: { module: ModuleInstance }) {
 
       <div className="row wrap" style={{ gap: 2 }}>
         {OPERATIONS.map((op) => (
-          <button
-            key={op.id}
-            type="button"
-            className="btn"
-            data-variant="ghost"
-            data-active={config.operation === op.id}
-            style={{ minHeight: 18 }}
-            onClick={() => setConfig({ operation: op.id })}
-            title={op.label}
-          >
+          <Button key={op.id} variant="ghost" active={config.operation === op.id} style={{ minHeight: 18 }} onClick={() => setConfig({ operation: op.id })} title={op.label}>
             {op.symbol}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -103,16 +95,9 @@ export function Component({ module }: { module: ModuleInstance }) {
           />
           {config.operation === 'percent'
             ? [10, 25, 50, 100].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  className="btn"
-                  data-variant="ghost"
-                  style={{ minHeight: 18 }}
-                  onClick={() => setConfig({ operand: preset })}
-                >
+                <Button key={preset} variant="ghost" style={{ minHeight: 18 }} onClick={() => setConfig({ operand: preset })}>
                   {preset}
-                </button>
+                </Button>
               ))
             : null}
         </div>

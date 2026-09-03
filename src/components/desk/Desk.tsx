@@ -4,6 +4,7 @@ import { useSystem } from '../../state/system';
 import { LinkLayer } from './LinkLayer';
 import { ModuleFrame } from './ModuleFrame';
 import type { Point } from './geometry';
+import { Button } from '../ui/Button';
 
 /**
  * The workspace surface.
@@ -109,9 +110,9 @@ export function Desk({ onAddModule }: { onAddModule: () => void }) {
           <div className="empty" style={{ position: 'absolute', inset: 0 }}>
             <h5>EMPTY DECK</h5>
             <p>This deck has no modules yet. Add one to start building your terminal.</p>
-            <button type="button" className="btn" data-variant="primary" onClick={onAddModule}>
+            <Button variant="primary" onClick={onAddModule}>
               + ADD MODULE
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

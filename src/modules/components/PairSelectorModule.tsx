@@ -8,6 +8,7 @@ import { useGlobalContext, useSystem } from '../../state/system';
 import { useTokenMarket } from '../../state/marketHooks';
 import { useModuleConfig, useModuleInputs, useModuleOutputs } from '../../state/moduleIO';
 import { formatPct, formatPrice, formatRatio, compactNumber } from '../../utils/format';
+import { Button } from '../../components/ui/Button';
 
 interface Config extends Record<string, unknown> {
   baseSymbol: string;
@@ -71,9 +72,9 @@ export function Component({ module }: { module: ModuleInstance }) {
             disabled={Boolean(linkedToken)}
           />
         </div>
-        <button type="button" className="btn" title="Flip pair" onClick={flip} aria-label="Flip pair">
+        <Button title="Flip pair" onClick={flip} aria-label="Flip pair">
           ⇄
-        </button>
+        </Button>
         <div className="grow">
           <TokenPicker chainId={chainId} label="TOKEN B" value={quote} exclude={base} onChange={setQuote} />
         </div>

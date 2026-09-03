@@ -3,6 +3,8 @@ import { getModuleDefinition, listCategories, searchModuleDefinitions } from '..
 import type { ModuleCategory } from '../../core/modules/types';
 import { hasModuleComponent } from '../../modules/components';
 import { useActiveDeck, useDeckActions, useDeskUI } from '../../state/deck';
+import { Button, IconButton } from '../ui/Button';
+import { Segmented } from '../ui/Segmented';
 import { findFreePosition, viewportOrigin } from './placement';
 
 const RECENT_KEY = 'cyberdex.recentModules';
@@ -67,24 +69,25 @@ export function ModuleLibrary({ onClose }: { onClose: () => void }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <button type="button" className="icon-btn" aria-label="Close library" onClick={onClose}>
+          <IconButton label="Close library" size="md" onClick={onClose}>
             ×
-          </button>
+          </IconButton>
         </div>
 
-        <div className="row wrap" style={{ gap: 2, padding: 'var(--space-3) var(--space-5)', borderBottom: '1px solid var(--border)' }}>
-          {(['ALL', 'RECENT', ...listCategories()] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              className="btn"
-              data-variant="ghost"
-              data-active={category === item}
-              onClick={() => setCategory(item as ModuleCategory | 'ALL' | 'RECENT')}
-            >
-              {item}
-            </button>
-          ))}
+        <div
+          className="row"
+          style={{ padding: 'var(--space-3) var(--space-5)', borderBottom: '1px solid var(--border)' }}
+        >
+          <Segmented
+            label="Module category"
+            size="md"
+            value={category}
+            options={(['ALL', 'RECENT', ...listCategories()] as const).map((item) => ({
+              value: item,
+              label: item,
+            }))}
+            onChange={(next) => setCategory(next as ModuleCategory | 'ALL' | 'RECENT')}
+          />
         </div>
 
         <div className="panel-body">
@@ -132,9 +135,7 @@ export function ModuleLibrary({ onClose }: { onClose: () => void }) {
           <span className="faint" style={{ marginRight: 'auto', fontSize: 'var(--text-3xs)' }}>
             {results.length} MODULES · v1 CATALOGUE
           </span>
-          <button type="button" className="btn" onClick={onClose}>
-            CLOSE
-          </button>
+          <Button onClick={onClose}>CLOSE</Button>
         </div>
       </div>
     </div>

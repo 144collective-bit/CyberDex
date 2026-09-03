@@ -3,6 +3,7 @@ import { createAlertRule, describeCondition } from '../services/alerts/AlertEngi
 import type { AlertConditionType } from '../services/alerts/AlertEngine';
 import { useAlertRules, useSystem } from '../state/system';
 import { formatRelative } from '../utils/format';
+import { Button, IconButton } from '../components/ui/Button';
 
 const CONDITIONS: AlertConditionType[] = [
   'PRICE_ABOVE',
@@ -67,20 +68,14 @@ export function AlertsPage() {
             value={threshold}
             onChange={(event) => setThreshold(event.target.value.replace(/[^0-9.\-]/g, ''))}
           />
-          <button
-            type="button"
-            className="btn"
-            data-variant="primary"
-            disabled={!name.trim()}
-            onClick={() => {
+          <Button variant="primary" disabled={!name.trim()} onClick={() => {
               system.alerts.add(
                 createAlertRule({ name: name.trim(), subject, type, threshold: Number(threshold) || 0 }),
               );
               setName('');
-            }}
-          >
+            }}>
             CREATE
-          </button>
+          </Button>
         </div>
         <p className="faint" style={{ fontSize: 'var(--text-3xs)', margin: 0 }}>
           Alerts created here can be driven by an Alert module on any deck — wire a price, ratio or calculator output
@@ -116,17 +111,12 @@ export function AlertsPage() {
                   </td>
                   <td className="num">
                     <div className="row" style={{ justifyContent: 'flex-end', gap: 2 }}>
-                      <button
-                        type="button"
-                        className="btn"
-                        data-variant="ghost"
-                        onClick={() => system.alerts.update(rule.id, { enabled: !rule.enabled })}
-                      >
+                      <Button variant="ghost" onClick={() => system.alerts.update(rule.id, { enabled: !rule.enabled })}>
                         {rule.enabled ? 'DISARM' : 'ARM'}
-                      </button>
-                      <button type="button" className="icon-btn" aria-label="Delete alert" onClick={() => system.alerts.remove(rule.id)}>
+                      </Button>
+                      <IconButton label="Delete alert" onClick={() => system.alerts.remove(rule.id)}>
                         ×
-                      </button>
+                      </IconButton>
                     </div>
                   </td>
                 </tr>

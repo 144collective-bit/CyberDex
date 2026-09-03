@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ModuleInstance } from '../../core/modules/types';
 import type { PairRef, Quote, TokenRef, TxRecord, WalletRecord } from '../../core/types';
 import { SimulatedTag, Warning } from '../../components/ui/States';
+import { Button } from '../../components/ui/Button';
+import { Segmented } from '../../components/ui/Segmented';
 import { TokenPicker } from '../../components/ui/TokenPicker';
 import type { PreparedTrade } from '../../services/execution/ExecutionService';
 import type { RoutingResult } from '../../services/dex/RoutingEngine';
@@ -216,19 +218,17 @@ export function Component({ module }: { module: ModuleInstance }) {
             onChange={(event) => setConfig({ amount: event.target.value.replace(/[^0-9.]/g, '') })}
           />
         </div>
-        <div className="row" style={{ gap: 2 }}>
+        <div className="row" style={{ gap: 'var(--space-2)' }}>
           {[25, 50, 75, 100].map((pct) => (
-            <button
+            <Button
               key={pct}
-              type="button"
-              className="btn"
-              data-variant="ghost"
-              style={{ minHeight: 16, flex: 1 }}
+              size="xs"
+              block
               disabled={!sellBalance || linkedAmount !== undefined}
               onClick={() => setConfig({ amount: String((sellBalance!.amount * pct) / 100) })}
             >
-              {pct}%
-            </button>
+              {pct === 100 ? 'MAX' : `${pct}%`}
+            </Button>
           ))}
         </div>
       </div>
@@ -266,22 +266,15 @@ export function Component({ module }: { module: ModuleInstance }) {
         </div>
       ) : null}
 
-      <div className="row" style={{ gap: 'var(--space-2)' }}>
+      <div className="row" style={{ gap: 'var(--space-3)' }}>
         <span className="label">SLIPPAGE</span>
-        {[0.1, 0.5, 1, 3].map((value) => (
-          <button
-            key={value}
-            type="button"
-            className="btn"
-            data-variant="ghost"
-            data-active={slippagePct === value}
-            style={{ minHeight: 16 }}
-            disabled={linkedSlippage !== undefined}
-            onClick={() => setConfig({ slippagePct: value })}
-          >
-            {value}%
-          </button>
-        ))}
+        <Segmented
+          label="Slippage tolerance"
+          value={slippagePct}
+          disabled={linkedSlippage !== undefined}
+          options={[0.1, 0.5, 1, 3].map((value) => ({ value, label: `${value}%` }))}
+          onChange={(value) => setConfig({ slippagePct: value })}
+        />
       </div>
 
       {quote?.warnings.map((warning) => (
@@ -306,16 +299,16 @@ export function Component({ module }: { module: ModuleInstance }) {
       ) : null}
 
       <span className="grow" />
-      <button
-        type="button"
-        className="btn"
-        data-variant="primary"
-        data-size="lg"
-        disabled={!quote || !wallet || wallet.watchOnly || quoting}
+      <Button
+        variant="primary"
+        size="lg"
+        block
+        loading={quoting && !quote}
+        disabled={!quote || !wallet || wallet.watchOnly}
         onClick={review}
       >
-        {quoting ? 'QUOTING…' : 'REVIEW TRADE'}
-      </button>
+        {quoting && !quote ? 'QUOTING' : 'REVIEW TRADE'}
+      </Button>
     </>
   );
 }
@@ -391,19 +384,19 @@ function ReviewPanel({
 
       <span className="grow" />
       <div className="row" style={{ gap: 'var(--space-3)' }}>
-        <button type="button" className="btn" onClick={onBack} disabled={working}>
+        <Button size="lg" onClick={onBack} disabled={working}>
           BACK
-        </button>
-        <button
-          type="button"
-          className="btn grow"
-          data-variant="primary"
-          data-size="lg"
-          disabled={working || (!trade.needsApproval && trade.blockers.length > 0)}
+        </Button>
+        <Button
+          variant="primary"
+          size="lg"
+          block
+          loading={working}
+          disabled={!trade.needsApproval && trade.blockers.length > 0}
           onClick={onConfirm}
         >
-          {working ? 'SUBMITTING…' : trade.needsApproval ? `APPROVE ${quote.source.symbol}` : 'CONFIRM TRADE'}
-        </button>
+          {working ? 'SUBMITTING' : trade.needsApproval ? `APPROVE ${quote.source.symbol}` : 'CONFIRM TRADE'}
+        </Button>
       </div>
     </>
   );

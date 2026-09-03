@@ -5,6 +5,7 @@ import { DECK_TEMPLATES, instantiateTemplate } from '../modules/templates';
 import { useActiveDeck, useDeckDispatch, useWorkspaceState } from '../state/deck';
 import { useSystem } from '../state/system';
 import { formatRelative } from '../utils/format';
+import { Button } from '../components/ui/Button';
 
 /** Deck manager: create, template, duplicate, rename, export, import, delete. */
 export function DecksPage({ onOpenDesk }: { onOpenDesk: () => void }) {
@@ -54,17 +55,12 @@ export function DecksPage({ onOpenDesk }: { onOpenDesk: () => void }) {
           <p className="faint">Each deck stores its modules, links, configuration, network and wallet.</p>
         </div>
         <div className="row wrap">
-          <button
-            type="button"
-            className="btn"
-            data-variant="primary"
-            onClick={() => dispatch({ type: 'DECK/ADD', deck: createDeck('NEW DECK') })}
-          >
+          <Button variant="primary" onClick={() => dispatch({ type: 'DECK/ADD', deck: createDeck('NEW DECK') })}>
             + NEW DECK
-          </button>
-          <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+          </Button>
+          <Button onClick={() => fileRef.current?.click()}>
             IMPORT
-          </button>
+          </Button>
           <input
             ref={fileRef}
             type="file"
@@ -102,24 +98,18 @@ export function DecksPage({ onOpenDesk }: { onOpenDesk: () => void }) {
                 <span>UPDATED {formatRelative(deck.updatedAt)} AGO</span>
               </div>
               <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-                <button type="button" className="btn" data-variant="primary" onClick={() => open(deck.id)}>
+                <Button variant="primary" onClick={() => open(deck.id)}>
                   OPEN
-                </button>
-                <button type="button" className="btn" onClick={() => dispatch({ type: 'DECK/DUPLICATE', deckId: deck.id })}>
+                </Button>
+                <Button onClick={() => dispatch({ type: 'DECK/DUPLICATE', deckId: deck.id })}>
                   DUPLICATE
-                </button>
-                <button type="button" className="btn" onClick={() => exportToFile(deck.id)}>
+                </Button>
+                <Button onClick={() => exportToFile(deck.id)}>
                   EXPORT
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  data-variant="danger"
-                  onClick={() => dispatch({ type: 'DECK/REMOVE', deckId: deck.id })}
-                  disabled={state.decks.length <= 1}
-                >
+                </Button>
+                <Button variant="danger" onClick={() => dispatch({ type: 'DECK/REMOVE', deckId: deck.id })} disabled={state.decks.length <= 1}>
                   DELETE
-                </button>
+                </Button>
               </div>
               <details>
                 <summary className="label" style={{ cursor: 'pointer' }}>DECK JSON</summary>
@@ -153,16 +143,12 @@ export function DecksPage({ onOpenDesk }: { onOpenDesk: () => void }) {
               <p className="faint" style={{ fontSize: 'var(--text-3xs)', margin: 0 }}>
                 {template.description}
               </p>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
+              <Button onClick={() => {
                   dispatch({ type: 'DECK/ADD', deck: instantiateTemplate(template) });
                   onOpenDesk();
-                }}
-              >
+                }}>
                 CREATE DECK
-              </button>
+              </Button>
             </article>
           ))}
         </div>

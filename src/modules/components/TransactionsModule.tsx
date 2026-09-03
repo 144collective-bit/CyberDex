@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { ModuleInstance } from '../../core/modules/types';
 import type { TxRecord, TxStatus, WalletRecord } from '../../core/types';
 import { EmptyState } from '../../components/ui/States';
+import { Segmented } from '../../components/ui/Segmented';
 import { useActiveWallet, useTransactions } from '../../state/system';
 import { useModuleConfig, useModuleInputs, useModuleOutputs } from '../../state/moduleIO';
 import { formatRelative } from '../../utils/format';
@@ -41,21 +42,19 @@ export function Component({ module }: { module: ModuleInstance }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div
         className="row"
-        style={{ gap: 2, padding: 'var(--space-2) var(--space-3)', borderBottom: '1px solid var(--border-faint)' }}
+        style={{ gap: 'var(--space-3)', padding: 'var(--space-2) var(--space-3)', borderBottom: '1px solid var(--border-faint)' }}
       >
-        {(['all', 'swap', 'approval', 'pending'] as const).map((key) => (
-          <button
-            key={key}
-            type="button"
-            className="btn"
-            data-variant="ghost"
-            data-active={config.filter === key}
-            style={{ minHeight: 18 }}
-            onClick={() => setConfig({ filter: key })}
-          >
-            {key.toUpperCase()}
-          </button>
-        ))}
+        <Segmented
+          label="Transaction filter"
+          value={config.filter}
+          options={[
+            { value: 'all', label: 'ALL' },
+            { value: 'swap', label: 'SWAP' },
+            { value: 'approval', label: 'APPROVAL' },
+            { value: 'pending', label: 'PENDING' },
+          ]}
+          onChange={(filter) => setConfig({ filter })}
+        />
         <span className="grow" />
         <span className="faint" style={{ fontSize: 'var(--text-3xs)' }}>
           {rows.length} RECORDS

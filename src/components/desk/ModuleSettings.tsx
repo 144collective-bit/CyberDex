@@ -2,6 +2,7 @@ import { getModuleDefinition } from '../../core/modules/registry';
 import type { ModuleDefinition, ModuleInstance } from '../../core/modules/types';
 import { useActiveDeck, useDeckActions } from '../../state/deck';
 import { incomingLinks, outgoingLinks } from '../../core/graph/linkGraph';
+import { Button, IconButton } from '../ui/Button';
 
 /**
  * Per-module settings drawer: identity, geometry, behaviour and — most
@@ -36,9 +37,9 @@ export function ModuleSettings({
     >
       <div className="spread">
         <span className="label">MODULE SETTINGS · v{definition.version}</span>
-        <button type="button" className="icon-btn" aria-label="Close settings" onClick={onClose}>
+        <IconButton label="Close settings" onClick={onClose}>
           ×
-        </button>
+        </IconButton>
       </div>
 
       <div className="col" style={{ gap: 2 }}>
@@ -90,28 +91,18 @@ export function ModuleSettings({
       </div>
 
       <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-        <button
-          type="button"
-          className="btn"
-          data-active={module.locked}
-          onClick={() => actions.patchModule(module.id, { locked: !module.locked })}
-        >
+        <Button active={module.locked} onClick={() => actions.patchModule(module.id, { locked: !module.locked })}>
           {module.locked ? 'UNLOCK' : 'LOCK'}
-        </button>
-        <button
-          type="button"
-          className="btn"
-          data-active={module.pinned}
-          onClick={() => actions.patchModule(module.id, { pinned: !module.pinned })}
-        >
+        </Button>
+        <Button active={module.pinned} onClick={() => actions.patchModule(module.id, { pinned: !module.pinned })}>
           {module.pinned ? 'UNPIN' : 'PIN'}
-        </button>
-        <button type="button" className="btn" onClick={() => actions.duplicateModule(module.id)}>
+        </Button>
+        <Button onClick={() => actions.duplicateModule(module.id)}>
           DUPLICATE
-        </button>
-        <button type="button" className="btn" data-variant="danger" onClick={() => actions.removeModule(module.id)}>
+        </Button>
+        <Button variant="danger" onClick={() => actions.removeModule(module.id)}>
           REMOVE
-        </button>
+        </Button>
       </div>
 
       <div className="col" style={{ gap: 2 }}>
@@ -124,9 +115,9 @@ export function ModuleSettings({
               <span className="truncate">
                 {source?.name ?? 'UNKNOWN'} · {link.sourceOutput} → {link.targetInput}
               </span>
-              <button type="button" className="icon-btn" aria-label="Disconnect" onClick={() => actions.disconnect(link.id)}>
+              <IconButton label="Disconnect" onClick={() => actions.disconnect(link.id)}>
                 ×
-              </button>
+              </IconButton>
             </div>
           );
         })}
@@ -143,9 +134,9 @@ export function ModuleSettings({
               <span className="truncate">
                 {link.sourceOutput} → {target?.name ?? 'UNKNOWN'} · {targetDef ? link.targetInput : link.targetInput}
               </span>
-              <button type="button" className="icon-btn" aria-label="Disconnect" onClick={() => actions.disconnect(link.id)}>
+              <IconButton label="Disconnect" onClick={() => actions.disconnect(link.id)}>
                 ×
-              </button>
+              </IconButton>
             </div>
           );
         })}

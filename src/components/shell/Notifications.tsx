@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNotifications, useSystem } from '../../state/system';
 import { formatRelative } from '../../utils/format';
+import { Button, IconButton } from '../ui/Button';
 
 /** Transient stack. Sticky items (errors, alerts) stay until dismissed. */
 export function ToastStack() {
@@ -25,14 +26,9 @@ export function ToastStack() {
         <div key={item.id} className="toast" data-kind={item.kind}>
           <div className="spread">
             <span className="label">{item.title}</span>
-            <button
-              type="button"
-              className="icon-btn"
-              aria-label="Dismiss"
-              onClick={() => system.notifications.dismiss(item.id)}
-            >
+            <IconButton label="Dismiss" onClick={() => system.notifications.dismiss(item.id)}>
               ×
-            </button>
+            </IconButton>
           </div>
           {item.detail ? <span className="faint" style={{ fontSize: 'var(--text-3xs)' }}>{item.detail}</span> : null}
         </div>
@@ -54,12 +50,12 @@ export function NotificationDrawer({ onClose }: { onClose: () => void }) {
       <div className="panel-head">
         <span className="panel-title">NOTIFICATIONS</span>
         <span className="grow" />
-        <button type="button" className="btn" data-variant="ghost" onClick={() => system.notifications.clear()}>
+        <Button variant="ghost" onClick={() => system.notifications.clear()}>
           CLEAR
-        </button>
-        <button type="button" className="icon-btn" aria-label="Close notifications" onClick={onClose}>
+        </Button>
+        <IconButton label="Close notifications" onClick={onClose}>
           ×
-        </button>
+        </IconButton>
       </div>
       <div className="scroll-y grow">
         {notifications.length === 0 ? (

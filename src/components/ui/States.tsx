@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Button } from './Button';
 
 /**
  * Module-scoped states. Nothing in the app shows a page-wide spinner: a module
@@ -37,9 +38,9 @@ export function ErrorState({
       <h5 style={{ color: 'var(--error)' }}>{title}</h5>
       <p>{message}</p>
       {onRetry ? (
-        <button type="button" className="btn" onClick={onRetry}>
+        <Button onClick={onRetry}>
           RETRY
-        </button>
+        </Button>
       ) : null}
     </div>
   );

@@ -4,6 +4,9 @@ import { getModuleDefinition } from '../../core/modules/registry';
 import { canConnect } from '../../core/modules/ports';
 import type { PortDataType } from '../../core/modules/ports';
 import { getModuleComponent } from '../../modules/components';
+import { Button, IconButton } from '../ui/Button';
+import { Menu } from '../ui/Menu';
+import type { MenuEntry } from '../ui/Menu';
 import { useDeckActions, useDeckModule, useDeskUI } from '../../state/deck';
 import { incomingLinks } from '../../core/graph/linkGraph';
 import { useActiveDeck } from '../../state/deck';
@@ -29,9 +32,7 @@ class ModuleErrorBoundary extends ReactComponent<{ name: string; children: React
         <div className="empty">
           <h5 style={{ color: 'var(--error)' }}>MODULE ERROR</h5>
           <p>{this.state.error.message}</p>
-          <button type="button" className="btn" onClick={() => this.setState({ error: null })}>
-            RELOAD MODULE
-          </button>
+          <Button onClick={() => this.setState({ error: null })}>RELOAD MODULE</Button>
         </div>
       );
     }
@@ -140,6 +141,42 @@ function ModuleFrameInner({ moduleId }: { moduleId: string }) {
 
   const LazyComponent = getModuleComponent(module.type);
   const fullscreen = ui.fullscreenModuleId === module.id;
+  const menuEntries: MenuEntry[] = [
+    { id: 'settings', label: 'Settings & links', icon: '⚙', onSelect: () => setMenuOpen((prev) => !prev) },
+    { id: 'duplicate', label: 'Duplicate', icon: '⧉', onSelect: () => actions.duplicateModule(module.id) },
+    { id: 'sep1', kind: 'separator' },
+    {
+      id: 'lock',
+      label: module.locked ? 'Unlock position' : 'Lock position',
+      checked: module.locked,
+      keepOpen: true,
+      onSelect: () => actions.patchModule(module.id, { locked: !module.locked }),
+    },
+    {
+      id: 'pin',
+      label: 'Pinned',
+      checked: module.pinned,
+      keepOpen: true,
+      onSelect: () => actions.patchModule(module.id, { pinned: !module.pinned }),
+    },
+    {
+      id: 'collapse',
+      label: 'Collapsed',
+      checked: module.collapsed,
+      keepOpen: true,
+      onSelect: () => actions.patchModule(module.id, { collapsed: !module.collapsed }),
+    },
+    {
+      id: 'fullscreen',
+      label: 'Full screen',
+      checked: fullscreen,
+      hint: '□',
+      onSelect: () => ui.setFullscreen(fullscreen ? null : module.id),
+    },
+    { id: 'sep2', kind: 'separator' },
+    { id: 'reset', label: 'Reset size', icon: '⤢', onSelect: () => actions.resizeModule(module.id, definition.defaultSize) },
+    { id: 'remove', label: 'Remove module', icon: '×', tone: 'danger', onSelect: () => actions.removeModule(module.id) },
+  ];
   const linkCount = incomingLinks(deck, module.id).length;
   const dimmed = Boolean(ui.draft && ui.draft.moduleId !== module.id && !definitionHasCompatiblePort(definition, ui.draft.type, ui.draft.side));
 
@@ -177,39 +214,32 @@ function ModuleFrameInner({ moduleId }: { moduleId: string }) {
         ) : null}
         {module.locked ? <span className="chip" data-tone="warning">LOCK</span> : null}
         <div className="module-head-actions" onPointerDown={(event) => event.stopPropagation()}>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Module settings"
-            data-active={menuOpen}
-            onClick={() => setMenuOpen((prev) => !prev)}
-          >
-            ⋮
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label={module.collapsed ? 'Expand module' : 'Collapse module'}
+          <Menu
+            label={`${module.name} actions`}
+            align="end"
+            entries={menuEntries}
+            trigger={(props) => (
+              <IconButton label="Module menu" data-active={menuOpen ? 'true' : undefined} {...props}>
+                ⋮
+              </IconButton>
+            )}
+          />
+          <IconButton
+            label={module.collapsed ? 'Expand module' : 'Collapse module'}
             onClick={() => actions.patchModule(module.id, { collapsed: !module.collapsed })}
           >
             {module.collapsed ? '▸' : '▾'}
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+          </IconButton>
+          <IconButton
+            label={fullscreen ? 'Exit full screen' : 'Full screen'}
+            active={fullscreen}
             onClick={() => ui.setFullscreen(fullscreen ? null : module.id)}
           >
             □
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Remove module"
-            onClick={() => actions.removeModule(module.id)}
-          >
+          </IconButton>
+          <IconButton label="Remove module" tone="danger" onClick={() => actions.removeModule(module.id)}>
             ×
-          </button>
+          </IconButton>
         </div>
       </header>
 

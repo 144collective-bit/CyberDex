@@ -7,6 +7,7 @@ import { useActiveWallet, useGlobalContext, useSystem, useWalletState } from '..
 import { usePortfolio } from '../../state/marketHooks';
 import { useModuleOutputs } from '../../state/moduleIO';
 import { formatPct, formatUsd } from '../../utils/format';
+import { Button, IconButton } from '../../components/ui/Button';
 
 export function Component({ module }: { module: ModuleInstance }) {
   const system = useSystem();
@@ -51,12 +52,12 @@ export function Component({ module }: { module: ModuleInstance }) {
         message="Connect an execution wallet to trade, or load the demo vault to explore the terminal."
         action={
           <div className="row wrap" style={{ justifyContent: 'center' }}>
-            <button type="button" className="btn" data-variant="primary" onClick={connect}>
+            <Button variant="primary" onClick={connect}>
               CONNECT WALLET
-            </button>
-            <button type="button" className="btn" onClick={() => system.wallets.addDemoWallet()}>
+            </Button>
+            <Button onClick={() => system.wallets.addDemoWallet()}>
               DEMO VAULT
-            </button>
+            </Button>
           </div>
         }
       />
@@ -75,17 +76,10 @@ export function Component({ module }: { module: ModuleInstance }) {
 
       <div className="col" style={{ gap: 2 }}>
         <span className="label">{wallet.label}</span>
-        <button
-          type="button"
-          className="btn"
-          data-variant="ghost"
-          style={{ justifyContent: 'flex-start', padding: 0, minHeight: 18 }}
-          onClick={() => void navigator.clipboard?.writeText(String(wallet.address))}
-          title="Copy address"
-        >
+        <Button variant="ghost" style={{ justifyContent: 'flex-start', padding: 0, minHeight: 18 }} onClick={() => void navigator.clipboard?.writeText(String(wallet.address))} title="Copy address">
           <span className="mono-num">{shortAddress(String(wallet.address), 6)}</span>
           <span className="faint">⧉</span>
-        </button>
+        </Button>
       </div>
 
       <div className="row wrap" style={{ gap: 'var(--space-6)' }}>
@@ -116,9 +110,9 @@ export function Component({ module }: { module: ModuleInstance }) {
           onChange={(event) => setWatchInput(event.target.value)}
           onKeyDown={(event) => event.key === 'Enter' && addWatch()}
         />
-        <button type="button" className="btn" onClick={addWatch} disabled={!watchInput}>
+        <Button onClick={addWatch} disabled={!watchInput}>
           ADD
-        </button>
+        </Button>
       </div>
 
       {walletState.wallets.length > 1 ? (
@@ -126,27 +120,15 @@ export function Component({ module }: { module: ModuleInstance }) {
           <span className="label">VAULTS</span>
           {walletState.wallets.map((item) => (
             <div key={item.id} className="row" style={{ gap: 'var(--space-2)' }}>
-              <button
-                type="button"
-                className="btn"
-                data-variant="ghost"
-                data-active={item.id === wallet.id}
-                style={{ justifyContent: 'flex-start', flex: 1 }}
-                onClick={() => system.wallets.setActive(item.id)}
-              >
+              <Button variant="ghost" active={item.id === wallet.id} style={{ justifyContent: 'flex-start', flex: 1 }} onClick={() => system.wallets.setActive(item.id)}>
                 <span className="truncate">{item.label}</span>
-              </button>
+              </Button>
               <span className="chip" data-tone={item.watchOnly ? 'warning' : 'accent'}>
                 {system.wallets.labelFor(item.kind)}
               </span>
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label={`Remove ${item.label}`}
-                onClick={() => system.wallets.disconnect(item.id)}
-              >
+              <IconButton label={`Remove ${item.label}`} onClick={() => system.wallets.disconnect(item.id)}>
                 ×
-              </button>
+              </IconButton>
             </div>
           ))}
         </div>

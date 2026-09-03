@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TokenRef } from '../../core/types';
 import { tokensForChain } from '../../services/market/tokens';
+import { Button } from './Button';
 
 export function TokenAvatar({ token, size = 16 }: { token: TokenRef; size?: number }) {
   return (
@@ -71,21 +72,13 @@ export function TokenPicker({
   return (
     <div ref={rootRef} style={{ position: 'relative', minWidth: 0 }}>
       {label ? <div className="label" style={{ marginBottom: 2 }}>{label}</div> : null}
-      <button
-        type="button"
-        className="btn"
-        style={{ width: '100%', justifyContent: 'space-between' }}
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-      >
+      <Button style={{ width: '100%', justifyContent: 'space-between' }} disabled={disabled} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((prev) => !prev)}>
         <span className="row" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
           {value ? <TokenAvatar token={value} /> : null}
           <span className="truncate">{value ? value.symbol : 'SELECT'}</span>
         </span>
         <span aria-hidden style={{ opacity: 0.6 }}>▾</span>
-      </button>
+      </Button>
 
       {open ? (
         <div
@@ -98,8 +91,8 @@ export function TokenPicker({
             zIndex: 60,
             background: 'var(--surface-overlay)',
             border: '1px solid var(--border-strong)',
-            borderRadius: 'var(--radius-xs)',
-            boxShadow: 'var(--shadow-float)',
+            borderRadius: 'var(--radius-sm)',
+            boxShadow: 'var(--shadow-float), var(--glow-soft)',
             maxHeight: 240,
             overflow: 'auto',
             minWidth: 180,
@@ -111,7 +104,7 @@ export function TokenPicker({
             placeholder="SEARCH TOKEN OR ADDRESS"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            style={{ border: 'none', borderBottom: '1px solid var(--border)', borderRadius: 0 }}
+            style={{ border: 'none', borderBottom: '1px solid var(--border)', borderRadius: 0, textTransform: 'none' }}
           />
           {options.length === 0 ? (
             <div className="faint" style={{ padding: 'var(--space-4)', fontSize: 'var(--text-3xs)' }}>
@@ -124,8 +117,8 @@ export function TokenPicker({
               type="button"
               role="option"
               aria-selected={value?.address === token.address}
-              className="palette-item"
-              data-active={value?.address === token.address}
+              className="menu-item"
+              data-checked={value?.address === token.address ? 'true' : undefined}
               onClick={() => {
                 onChange(token);
                 setOpen(false);

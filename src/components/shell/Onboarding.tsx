@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { STORAGE_KEYS } from '../../core/storage/PersistenceAdapter';
 import { useSystem } from '../../state/system';
+import { Button } from '../ui/Button';
 
 /** First launch. Two doors: connect a real wallet, or explore on demo data. */
 export function Onboarding({ onDone }: { onDone: () => void }) {
@@ -33,34 +34,23 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           {error ? <div className="alert-banner" data-tone="error">{error}</div> : null}
 
           <div className="col" style={{ gap: 'var(--space-3)' }}>
-            <button
-              type="button"
-              className="btn"
-              data-variant="primary"
-              data-size="lg"
-              onClick={() =>
+            <Button variant="primary" size="lg" onClick={() =>
                 void system.wallets
                   .connectInjected()
                   .then(finish)
                   .catch((err: Error) => setError(err.message))
-              }
-            >
+              }>
               CONNECT WALLET
-            </button>
-            <button
-              type="button"
-              className="btn"
-              data-size="lg"
-              onClick={() => {
+            </Button>
+            <Button size="lg" onClick={() => {
                 system.wallets.addDemoWallet();
                 finish();
-              }}
-            >
+              }}>
               EXPLORE DEMO
-            </button>
-            <button type="button" className="btn" data-variant="ghost" onClick={finish}>
+            </Button>
+            <Button variant="ghost" onClick={finish}>
               SKIP — JUST LOOK AROUND
-            </button>
+            </Button>
           </div>
 
           <p className="faint" style={{ margin: 0, fontSize: 'var(--text-3xs)' }}>

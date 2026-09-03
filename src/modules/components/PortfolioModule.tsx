@@ -3,6 +3,7 @@ import type { ModuleInstance } from '../../core/modules/types';
 import type { TokenBalance, WalletRecord } from '../../core/types';
 import { EmptyState, ErrorState, LoadingState, SimulatedTag, Stat } from '../../components/ui/States';
 import { TokenAvatar } from '../../components/ui/TokenPicker';
+import { Segmented } from '../../components/ui/Segmented';
 import { useActiveWallet, useGlobalContext, useSystem } from '../../state/system';
 import { usePortfolio } from '../../state/marketHooks';
 import { useModuleConfig, useModuleInputs, useModuleOutputs } from '../../state/moduleIO';
@@ -77,30 +78,27 @@ export function Component({ module }: { module: ModuleInstance }) {
         </div>
       </div>
 
-      <div className="row" style={{ gap: 'var(--space-2)' }}>
-        <span className="label">SORT</span>
-        {(['value', 'amount', 'symbol'] as const).map((key) => (
-          <button
-            key={key}
-            type="button"
-            className="btn"
-            data-variant="ghost"
-            data-active={config.sort === key}
-            style={{ minHeight: 18 }}
-            onClick={() => setConfig({ sort: key })}
-          >
-            {key.toUpperCase()}
-          </button>
-        ))}
+      <div className="row" style={{ gap: 'var(--space-3)' }}>
+        <Segmented
+          label="Sort holdings"
+          value={config.sort}
+          options={[
+            { value: 'value', label: 'VALUE' },
+            { value: 'amount', label: 'AMOUNT' },
+            { value: 'symbol', label: 'SYMBOL' },
+          ]}
+          onChange={(sort) => setConfig({ sort })}
+        />
         <span className="grow" />
-        <label className="row" style={{ gap: 4, cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={config.hideDust}
-            onChange={(event) => setConfig({ hideDust: event.target.checked })}
-          />
-          <span className="label">HIDE DUST</span>
-        </label>
+        <Segmented
+          label="Dust filter"
+          value={config.hideDust ? 'hide' : 'show'}
+          options={[
+            { value: 'hide', label: 'HIDE DUST' },
+            { value: 'show', label: 'ALL' },
+          ]}
+          onChange={(value) => setConfig({ hideDust: value === 'hide' })}
+        />
       </div>
 
       <div className="scroll-y grow" style={{ margin: '0 calc(var(--space-4) * -1)' }}>
