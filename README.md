@@ -211,7 +211,31 @@ data attributes against design tokens, so themes and density need no component c
 
 `⌘/Ctrl + K` command palette · `⌘/Ctrl + M` module library · `⌘/Ctrl + S` save deck ·
 `⌘/Ctrl + D` new deck · `⌘/Ctrl + Z` undo · `⇧⌘/Ctrl + Z` redo ·
-`L` link mode · `Delete` remove selected module or link · `Esc` close.
+`L` link mode · `+` / `-` zoom · `0` reset to 100% · `F` fit deck on screen ·
+`Delete` remove selected module or link · `Esc` close.
+
+### Getting around a large deck
+
+A deck stops fitting on one screen quickly, and scrollbars alone make a big
+workspace feel like a keyhole:
+
+- **Zoom** runs on fixed stops (35% → 200%) rather than free scaling, so the
+  control can always say something as useful as "100%". `⌘/Ctrl + wheel` zooms
+  about the cursor — the canvas point under the pointer stays under it — and the
+  buttons and keys zoom about the centre of the view.
+- **Fit** (`F`) picks the zoom that puts the whole deck on screen and centres it,
+  never magnifying past 100%: a three-module deck sits at its natural size.
+- **Go to** lists every module on the deck and scrolls to the one you pick.
+- **Minimap**, bottom right, draws the whole deck with the on-screen area on top;
+  click or drag it to move around.
+- **Middle-button drag** pans the canvas from anywhere, since the left button
+  belongs to modules and ports.
+
+The grid is drawn on the canvas rather than the viewport, so it scrolls and
+scales with the deck — halved squares are the plainest possible read on the
+current zoom. Pointer and scroll deltas are divided by the scale before they
+reach the drag maths, so dragging, snapping and swapping are as accurate at 50%
+as at 100%.
 
 ### Reading the deck
 

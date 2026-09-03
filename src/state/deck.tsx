@@ -6,6 +6,7 @@ import type { PortDataType } from '../core/modules/ports';
 import type { Connection, Deck, ModuleInstance } from '../core/modules/types';
 import { useStoreSelector, shallowArrayEqual } from '../core/useStore';
 import { useSystem } from './system';
+import { clampZoom } from '../components/desk/zoom';
 
 export function useWorkspaceState() {
   const system = useSystem();
@@ -121,6 +122,9 @@ interface DeskUI {
   /** Enlarges and labels every port, so links are findable. */
   linkMode: boolean;
   toggleLinkMode(): void;
+  /** Canvas scale. Drag maths divides client deltas by it. */
+  zoom: number;
+  setZoom(zoom: number): void;
   select(moduleId: string | null): void;
   selectLink(linkId: string | null): void;
   setFullscreen(moduleId: string | null): void;
@@ -138,6 +142,7 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<LinkDraft | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [linkMode, setLinkMode] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   const value = useMemo<DeskUI>(
     () => ({
@@ -149,6 +154,8 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
       setDragPreview,
       linkMode,
       toggleLinkMode: () => setLinkMode((prev) => !prev),
+      zoom,
+      setZoom: (next: number) => setZoom(clampZoom(next)),
       select: (moduleId) => {
         setSelectedModuleId(moduleId);
         setSelectedLinkId(null);
@@ -162,7 +169,7 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
       moveLink: (x, y) => setDraft((prev) => (prev ? { ...prev, x, y } : prev)),
       endLink: () => setDraft(null),
     }),
-    [selectedModuleId, selectedLinkId, fullscreenModuleId, draft, dragPreview, linkMode],
+    [selectedModuleId, selectedLinkId, fullscreenModuleId, draft, dragPreview, linkMode, zoom],
   );
 
   return <DeskUIContext.Provider value={value}>{children}</DeskUIContext.Provider>;

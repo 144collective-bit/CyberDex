@@ -62,6 +62,7 @@ function ModuleFrameInner({ moduleId }: { moduleId: string }) {
   const deck = useActiveDeck();
   const actions = useDeckActions();
   const ui = useDeskUI();
+  const zoom = ui.zoom;
   const [drag, setDrag] = useState<DragState | null>(null);
   const [offset, setOffset] = useState({ dx: 0, dy: 0, dw: 0, dh: 0 });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -110,8 +111,11 @@ function ModuleFrameInner({ moduleId }: { moduleId: string }) {
       // scroll delta counts as movement too.
       const scrollDx = (surface?.scrollLeft ?? 0) - drag.startScrollLeft;
       const scrollDy = (surface?.scrollTop ?? 0) - drag.startScrollTop;
-      const dx = clientX - drag.startX + scrollDx;
-      const dy = clientY - drag.startY + scrollDy;
+      // Pointer and scroll deltas are screen pixels; module positions are canvas
+      // pixels. At 50% zoom the pointer has to travel twice as far to move a
+      // module the same distance, so every delta is divided by the scale.
+      const dx = (clientX - drag.startX + scrollDx) / zoom;
+      const dy = (clientY - drag.startY + scrollDy) / zoom;
 
       if (drag.mode !== 'move') {
         setOffset({
@@ -146,7 +150,7 @@ function ModuleFrameInner({ moduleId }: { moduleId: string }) {
         swapTargetId,
       });
     },
-    [drag, module, neighbours, deck.settings.gridSize, deck.settings.snapToGrid, ui],
+    [drag, module, neighbours, deck.settings.gridSize, deck.settings.snapToGrid, ui, zoom],
   );
 
   const onPointerMove = useCallback(

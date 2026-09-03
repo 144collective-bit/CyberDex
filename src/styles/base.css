@@ -508,6 +508,20 @@ button, input, select, textarea { font: inherit; color: inherit; }
   flex: 1 1 auto;
   overflow: auto;
   background-color: var(--bg-deep);
+}
+.desk[data-dragging='true'] { cursor: grabbing; }
+.desk[data-panning='true'] { cursor: grabbing; }
+
+/* Sized to the scaled canvas so the scrollbars describe what is actually there. */
+.desk-stage { position: relative; }
+
+.desk-canvas {
+  position: relative;
+  width: 4000px;
+  height: 2600px;
+  /* The grid lives on the canvas, not the viewport, so it scrolls and scales
+     with the deck — at 50% the squares halve, which is the clearest possible
+     read on the current zoom. */
   background-image:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
@@ -515,8 +529,59 @@ button, input, select, textarea { font: inherit; color: inherit; }
     linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px);
   background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
 }
-.desk[data-dragging='true'] { cursor: grabbing; }
-.desk-canvas { position: relative; width: 4000px; height: 2600px; }
+
+.desk-empty {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.desk-empty > * { pointer-events: auto; }
+
+/* zoom + navigation controls */
+.desk-zoom { display: inline-flex; align-items: center; gap: 2px; }
+.desk-zoom-value { min-width: 52px; justify-content: center; font-variant-numeric: tabular-nums; }
+
+.desk-jump { position: relative; }
+.desk-jump-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: var(--z-overlay);
+  min-width: 190px;
+  max-height: 280px;
+  overflow: auto;
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-float), var(--glow-soft);
+}
+
+.minimap {
+  position: sticky;
+  bottom: var(--space-4);
+  left: calc(100% - 168px);
+  z-index: var(--z-chrome);
+  margin: 0 var(--space-4) var(--space-4) auto;
+  background: color-mix(in srgb, var(--surface-overlay) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-float);
+  cursor: crosshair;
+  touch-action: none;
+}
+.minimap-module {
+  position: absolute;
+  background: var(--accent-dim);
+  border-radius: 1px;
+  opacity: 0.55;
+}
+.minimap-module[data-selected='true'] { background: var(--accent); opacity: 1; }
+.minimap-viewport {
+  position: absolute;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  pointer-events: none;
+}
 
 .module {
   position: absolute;
