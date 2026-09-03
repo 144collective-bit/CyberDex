@@ -52,9 +52,10 @@ data and transactions, and labels every simulated value as such.
 src/
   core/         module model, registry, port types, deck reducer, link graph,
                 event bus, runtime output store, storage adapters, deck schema
-  services/     market data (demo + live + resilient switch) · http · chain ·
-                DEX routing · wallet · portfolio · execution · alerts ·
-                telemetry · notifications   (all interface-first)
+  services/     market data (demo · on-chain · indexer, behind one switch) ·
+                http · json-rpc · chain · DEX routing · wallet · portfolio ·
+                execution · alerts · telemetry · notifications
+                (all interface-first)
   modules/      declarative module definitions + lazy-loaded components
   components/   desk (frames, ports, links, library) and shell (bar, rail, palette)
   state/        React bindings: system provider, deck hooks, module IO hooks
@@ -138,33 +139,43 @@ Templates: **GENESIS · TRADER · PORTFOLIO · HEX COMMAND · WHALE HUNTER · BA
 
 ## Market data
 
-The app ships with two feeds and a switch in **Settings → Market feed**:
+Three feeds, switched in **Settings → Market feed**, all behind the same fallback:
 
-- **DEMO** (default) — seeded, simulated prices. Every value is flagged `simulated` in the
-  model and labelled in the UI.
-- **LIVE** — GeckoTerminal's public API for prices, 24h change, volume, liquidity pools and
-  OHLCV candles, per chain (`pulsechain`, `eth`, `base`).
+| Feed | Source | Has history? |
+| --- | --- | --- |
+| **DEMO** (default) | seeded simulation | yes, synthetic |
+| **ON-CHAIN** | PulseChain AMM reserves | no |
+| **INDEXER** | GeckoTerminal public API | yes |
 
-Everything goes through `HttpClient`: per-request timeout, bounded retries with backoff
-that honours `Retry-After`, a short TTL cache, de-duplication of identical in-flight
-requests, and a minimum gap between calls to stay inside the provider's rate limit.
+**On-chain is the authoritative one.** Prices come from `getReserves()` on the PulseX
+pairs — the same state the router trades against, with no third party in between — and USD
+is anchored by routing through WPLS to a stable pool. Every read in a refresh is pinned to
+one block number, so a set of prices is a coherent snapshot rather than several moments
+stitched together. Quotes come from the router's own `getAmountsOut`, and price impact from
+the pool's reserves, so the number shown is the number the chain would produce.
 
-`ResilientMarketProvider` wraps the live feed with the demo feed behind it. After two
-consecutive failures it switches over, raises **one** notice (not one per call), flips
-`origin` to `demo` so every module shows its DEMO badge, and reports `degraded` health.
-`recheck()` returns to live data and says so. Price subscriptions run through the same
-path, so a mid-session outage keeps prices flowing rather than freezing a module. A quote
-that has not refreshed within 90s is marked STALE rather than presented as current.
+What the chain cannot give cheaply is history. Candles and 24h aggregates need log
+indexing, so on this feed `getOHLC` returns nothing and the chart shows its empty state
+rather than inventing a series. Point it at an indexer when you have one.
 
-> The GeckoTerminal adapter is written against the provider's documented response shapes
-> and covered by fixture tests, but it has **not** been exercised against the live endpoint
-> — the build environment blocks outbound HTTP to it. Expect one local run to shake out
-> field-name drift. Mapping lives in pure functions (`mapTokenMarket`, `mapCandles`,
-> `mapLiquidity`) so a fix is a small, tested change.
+`JsonRpcClient` holds several RPC endpoints, batches calls into one request, fails over
+when one stops answering and lets it back in after a cooldown. A contract revert is
+distinguished from a dead endpoint, so a bad token never marks a healthy node unhealthy.
+Contract addresses live in `services/chain/chainConfig.ts` — **verify them against an
+explorer before trusting a deployment**; a wrong router means a broken quote, and a wrong
+stable pair means a wrong USD price everywhere.
 
-To point at a different backend — your own indexer, for instance — implement
-`MarketDataProvider` and pass it to `ResilientMarketProvider` in `createSystem`. No module
-changes: modules only know the interface.
+`ResilientMarketProvider` wraps each live feed with the demo feed behind it. After two
+consecutive failures it switches over, raises one notice, flips `origin` to `demo` so every
+module shows its DEMO badge, and reports `degraded` health. `recheck()` returns to live and
+says so. A quote that has not refreshed within 90s is marked STALE.
+
+> The GeckoTerminal adapter and the PulseChain reads are written against documented shapes
+> and covered by fixture tests, but neither has been exercised against a live endpoint —
+> the build environment blocks outbound HTTP. Expect one local run to confirm.
+
+To add a backend, implement `MarketDataProvider` and register it in `createSystem`. No
+module changes: modules only know the interface.
 
 ## Moving modules
 

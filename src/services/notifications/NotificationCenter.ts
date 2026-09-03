@@ -11,6 +11,11 @@ export interface Notification {
   read: boolean;
   /** Auto-dismiss from the toast stack after this many ms (0 = sticky). */
   ttlMs: number;
+  /**
+   * When the toast was dismissed. The record stays in the centre either way —
+   * a transient toast must never be the only trace of an outage or a trade.
+   */
+  dismissedAt: number | null;
 }
 
 let seq = 0;
@@ -59,12 +64,15 @@ export class NotificationCenter {
     return () => this.listeners.delete(listener);
   };
 
-  push(input: Omit<Notification, 'id' | 'at' | 'read' | 'ttlMs'> & { ttlMs?: number }): Notification {
+  push(
+    input: Omit<Notification, 'id' | 'at' | 'read' | 'ttlMs' | 'dismissedAt'> & { ttlMs?: number },
+  ): Notification {
     const notification: Notification = {
       id: `ntf_${Date.now().toString(36)}_${(seq++).toString(36)}`,
       at: Date.now(),
       read: false,
       ttlMs: input.ttlMs ?? 6000,
+      dismissedAt: null,
       ...input,
     };
     this.items = [notification, ...this.items].slice(0, this.limit);
@@ -72,11 +80,20 @@ export class NotificationCenter {
     return notification;
   }
 
+  /** Hide the toast. The notification itself is kept for the centre. */
   dismiss(id: string): void {
-    const next = this.items.filter((n) => n.id !== id);
-    if (next.length === this.items.length) return;
-    this.items = next;
-    this.emit();
+    let changed = false;
+    this.items = this.items.map((n) => {
+      if (n.id !== id || n.dismissedAt !== null) return n;
+      changed = true;
+      return { ...n, dismissedAt: Date.now() };
+    });
+    if (changed) this.emit();
+  }
+
+  /** Notifications still owed a toast. */
+  active(): Notification[] {
+    return this.items.filter((n) => n.dismissedAt === null);
   }
 
   markAllRead(): void {

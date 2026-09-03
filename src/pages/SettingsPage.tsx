@@ -100,15 +100,22 @@ export function SettingsPage() {
           size="md"
           value={feed}
           options={[
-            { value: 'demo', label: 'DEMO FEED', hint: 'Simulated prices, labelled everywhere' },
-            { value: 'live', label: 'LIVE DATA', hint: 'GeckoTerminal public API' },
+            { value: 'demo', label: 'DEMO', hint: 'Simulated prices, labelled everywhere' },
+            { value: 'chain', label: 'ON-CHAIN', hint: 'AMM reserves read from PulseChain' },
+            { value: 'api', label: 'INDEXER', hint: 'GeckoTerminal public API' },
           ]}
           onChange={setFeed}
         />
         <p className="faint" style={{ margin: 0, fontSize: 'var(--text-3xs)' }}>
-          {feed === 'live'
-            ? 'Prices, charts and liquidity come from the live provider. If it fails or rate-limits, the deck falls back to simulated data and says so — it never shows stale numbers as live ones.'
-            : 'Every market value is simulated. Transactions remain simulated regardless of this setting until an execution wallet is connected.'}
+          {feed === 'chain'
+            ? 'Prices and liquidity are computed from AMM reserves at a pinned block — the same state the router trades against, with no third party in between. Charts and 24h aggregates need an indexer, so they stay empty on this feed.'
+            : feed === 'api'
+              ? 'Prices, charts and liquidity come from a public indexer. It has history, but its uptime and rate limits are not yours.'
+              : 'Every market value is simulated. Transactions remain simulated regardless of this setting until an execution wallet is connected.'}
+        </p>
+        <p className="faint" style={{ margin: 0, fontSize: 'var(--text-3xs)' }}>
+          Any feed that fails twice in a row falls back to the demo data and says so — no feed is
+          allowed to show stale numbers as if they were live.
         </p>
       </section>
 

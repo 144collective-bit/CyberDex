@@ -10,7 +10,7 @@ import type {
 } from '../../core/types';
 import type { LiquiditySnapshot, MarketDataProvider } from './MarketDataProvider';
 
-export type FeedMode = 'demo' | 'live';
+export type FeedMode = 'demo' | 'chain' | 'api';
 
 /**
  * Runtime choice between the demo feed and the live one.
@@ -20,18 +20,16 @@ export type FeedMode = 'demo' | 'live';
  * re-subscribing or knowing that a switch exists.
  */
 export class MarketDataSwitch implements MarketDataProvider {
-  private demo: MarketDataProvider;
-  private live: MarketDataProvider;
+  private feeds: Record<FeedMode, MarketDataProvider>;
   private mode: FeedMode = 'demo';
   private listeners = new Set<() => void>();
 
-  constructor(demo: MarketDataProvider, live: MarketDataProvider) {
-    this.demo = demo;
-    this.live = live;
+  constructor(feeds: Record<FeedMode, MarketDataProvider>) {
+    this.feeds = feeds;
   }
 
   private get active(): MarketDataProvider {
-    return this.mode === 'live' ? this.live : this.demo;
+    return this.feeds[this.mode];
   }
 
   get id(): string {
@@ -59,9 +57,9 @@ export class MarketDataSwitch implements MarketDataProvider {
     for (const listener of Array.from(this.listeners)) listener();
   }
 
-  /** The live provider, for status displays that need its detail. */
-  getLiveProvider(): MarketDataProvider {
-    return this.live;
+  /** A specific feed, for status displays that need its detail. */
+  getFeed(mode: FeedMode): MarketDataProvider {
+    return this.feeds[mode];
   }
 
   listTokens(chainId: number): Promise<TokenRef[]> {

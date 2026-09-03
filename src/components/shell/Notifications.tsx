@@ -7,7 +7,8 @@ import { Button, IconButton } from '../ui/Button';
 export function ToastStack() {
   const system = useSystem();
   const notifications = useNotifications();
-  const visible = notifications.slice(0, 4);
+  // Only undismissed notifications get a toast; the centre keeps the rest.
+  const visible = notifications.filter((item) => item.dismissedAt === null).slice(0, 4);
 
   useEffect(() => {
     const timers = visible

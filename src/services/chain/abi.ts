@@ -58,3 +58,75 @@ export function toBaseUnits(amount: number, decimals: number): string {
   const combined = `${whole}${paddedFraction}`.replace(/^0+(?=\d)/, '');
   return combined === '' ? '0' : combined;
 }
+
+/* ---------------------------------------------------------------- AMM reads */
+
+export const AMM_SELECTORS = {
+  getReserves: '0x0902f1ac', // getReserves()
+  token0: '0x0dfe1681', // token0()
+  token1: '0xd21220a7', // token1()
+  getPair: '0xe6a43905', // getPair(address,address)
+  getAmountsOut: '0xd06ca61f', // getAmountsOut(uint256,address[])
+  totalSupply: '0x18160ddd', // totalSupply()
+} as const;
+
+export function encodeGetReserves(): string {
+  return AMM_SELECTORS.getReserves;
+}
+
+export function encodeGetPair(tokenA: string, tokenB: string): string {
+  return AMM_SELECTORS.getPair + padAddress(tokenA) + padAddress(tokenB);
+}
+
+/**
+ * getAmountsOut(uint256 amountIn, address[] path).
+ *
+ * Head is the amount plus the offset to the dynamic array; tail is the array
+ * length followed by one word per hop.
+ */
+export function encodeGetAmountsOut(amountIn: bigint | string, path: string[]): string {
+  const head = padUint(amountIn) + padUint(64); // array data starts after two words
+  const tail = padUint(path.length) + path.map((address) => padAddress(address)).join('');
+  return AMM_SELECTORS.getAmountsOut + head + tail;
+}
+
+function words(hex: string): string[] {
+  const body = hex.replace(/^0x/, '');
+  const out: string[] = [];
+  for (let i = 0; i + 64 <= body.length; i += 64) out.push(body.slice(i, i + 64));
+  return out;
+}
+
+export interface Reserves {
+  reserve0: bigint;
+  reserve1: bigint;
+  blockTimestampLast: number;
+}
+
+/** Decode getReserves() → (uint112, uint112, uint32). */
+export function decodeReserves(hex: string): Reserves | null {
+  const parts = words(hex);
+  if (parts.length < 3) return null;
+  return {
+    reserve0: BigInt(`0x${parts[0]}`),
+    reserve1: BigInt(`0x${parts[1]}`),
+    blockTimestampLast: Number(BigInt(`0x${parts[2]}`)),
+  };
+}
+
+/** Decode a single returned address, or null for the zero address. */
+export function decodeAddress(hex: string): string | null {
+  const parts = words(hex);
+  if (!parts.length) return null;
+  const address = `0x${parts[0]!.slice(24)}`;
+  return /^0x0{40}$/.test(address) ? null : address;
+}
+
+/** Decode getAmountsOut → uint256[]. */
+export function decodeAmounts(hex: string): bigint[] {
+  const parts = words(hex);
+  // [offset, length, ...values]
+  if (parts.length < 2) return [];
+  const length = Number(BigInt(`0x${parts[1]}`));
+  return parts.slice(2, 2 + length).map((word) => BigInt(`0x${word}`));
+}

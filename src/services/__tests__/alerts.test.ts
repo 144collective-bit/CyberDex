@@ -99,6 +99,26 @@ describe('NotificationCenter', () => {
     expect(center.getState()[0]?.title).toBe('TRANSACTION CONFIRMED');
   });
 
+  it('keeps a dismissed toast in the notification centre', () => {
+    const center = new NotificationCenter();
+    const notification = center.push({ kind: 'error', title: 'LIVE FEED UNAVAILABLE' });
+    expect(center.active()).toHaveLength(1);
+
+    center.dismiss(notification.id);
+    // The toast is gone…
+    expect(center.active()).toHaveLength(0);
+    // …but the record survives, which is the whole point of a centre.
+    expect(center.getState()).toHaveLength(1);
+    expect(center.getState()[0]?.dismissedAt).toBeTypeOf('number');
+  });
+
+  it('clears everything on request', () => {
+    const center = new NotificationCenter();
+    center.push({ kind: 'info', title: 'ONE' });
+    center.clear();
+    expect(center.getState()).toHaveLength(0);
+  });
+
   it('tracks unread counts and clears', () => {
     const center = new NotificationCenter();
     center.push({ kind: 'info', title: 'ONE' });

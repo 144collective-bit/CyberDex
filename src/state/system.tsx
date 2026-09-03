@@ -15,6 +15,8 @@ import { DemoDexAdapter } from '../services/dex/adapters/DemoDexAdapter';
 import { RoutingEngine } from '../services/dex/RoutingEngine';
 import { DemoMarketDataProvider } from '../services/market/DemoMarketDataProvider';
 import { GeckoTerminalProvider } from '../services/market/GeckoTerminalProvider';
+import { PulseChainMarketProvider } from '../services/market/onchain/PulseChainMarketProvider';
+import { PulseXOnChainAdapter } from '../services/dex/adapters/PulseXOnChainAdapter';
 import { ResilientMarketProvider } from '../services/market/ResilientMarketProvider';
 import { MarketDataSwitch } from '../services/market/MarketDataSwitch';
 import type { FeedMode } from '../services/market/MarketDataSwitch';
@@ -67,10 +69,13 @@ export function createSystem(options: { storage?: PersistenceAdapter; bus?: Even
   const storage = options.storage ?? createDefaultAdapter(reportStorageFailure);
 
   const demoMarket = new DemoMarketDataProvider();
-  // Live data with the demo feed behind it: an outage degrades to clearly
+  // Three feeds, each behind the same fallback: an outage degrades to clearly
   // labelled simulated data instead of an empty terminal.
-  const liveMarket = new ResilientMarketProvider(new GeckoTerminalProvider(), demoMarket, bus);
-  const market = new MarketDataSwitch(demoMarket, liveMarket);
+  //  · chain — reserves read straight from PulseChain: authoritative, no history
+  //  · api   — a public indexer: has history, is someone else's uptime
+  const chainMarket = new ResilientMarketProvider(new PulseChainMarketProvider(), demoMarket, bus);
+  const apiMarket = new ResilientMarketProvider(new GeckoTerminalProvider(), demoMarket, bus);
+  const market = new MarketDataSwitch({ demo: demoMarket, chain: chainMarket, api: apiMarket });
   const routing = new RoutingEngine();
   // Venues differ in fee and depth so route comparison is meaningful.
   routing.register(
@@ -127,6 +132,14 @@ export function createSystem(options: { storage?: PersistenceAdapter; bus?: Even
       market,
     ),
   );
+
+  // Quotes that will be executed should come from the router that executes
+  // them, so the on-chain adapter is registered first.
+  try {
+    routing.register(new PulseXOnChainAdapter({ chainId: 369 }));
+  } catch (err) {
+    console.warn('[dex] on-chain adapter unavailable', err);
+  }
 
   const wallets = new WalletService(storage, bus);
   const portfolio = new PortfolioService(bus);
@@ -209,7 +222,9 @@ export function SystemProvider({ system, children }: { system: System; children:
       }>(STORAGE_KEYS.preferences);
       if (prefs && !cancelled) {
         system.global.set({ theme: prefs.theme, density: prefs.density });
-        if (prefs.feed) system.marketSwitch.setMode(prefs.feed);
+        // 'live' was the old name for the API feed.
+        const feed = (prefs.feed as string) === 'live' ? 'api' : prefs.feed;
+        if (feed) system.marketSwitch.setMode(feed as FeedMode);
       }
       const active = system.wallets.getActiveWallet();
       if (active && !cancelled) {
@@ -353,13 +368,27 @@ export function useMarketFeed() {
       system.marketSwitch.setMode(next);
       const { theme, density } = system.global.getState();
       void system.storage.set(STORAGE_KEYS.preferences, { theme, density, feed: next });
+      const detail: Record<FeedMode, { title: string; body: string; kind: 'info' | 'warning' }> = {
+        chain: {
+          kind: 'info',
+          title: 'ON-CHAIN DATA ENABLED',
+          body: 'Prices come from AMM reserves on PulseChain. Charts need an indexer and stay empty.',
+        },
+        api: {
+          kind: 'info',
+          title: 'INDEXER FEED ENABLED',
+          body: 'Prices, charts and liquidity come from the public API.',
+        },
+        demo: {
+          kind: 'warning',
+          title: 'DEMO FEED ENABLED',
+          body: 'All market values are simulated and labelled as such.',
+        },
+      };
       system.notifications.push({
-        kind: next === 'live' ? 'info' : 'warning',
-        title: next === 'live' ? 'LIVE MARKET DATA ENABLED' : 'DEMO FEED ENABLED',
-        detail:
-          next === 'live'
-            ? 'Prices and charts now come from the live provider.'
-            : 'All market values are simulated and labelled as such.',
+        kind: detail[next].kind,
+        title: detail[next].title,
+        detail: detail[next].body,
       });
     },
     [system],
