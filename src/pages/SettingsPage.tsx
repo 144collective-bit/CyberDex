@@ -1,7 +1,7 @@
 import { STORAGE_KEYS } from '../core/storage/PersistenceAdapter';
 import { LocalStorageAdapter } from '../core/storage/LocalStorageAdapter';
 import { useActiveDeck, useDeckActions } from '../state/deck';
-import { useGlobalContext, useSystem } from '../state/system';
+import { useGlobalContext, useMarketFeed, useSystem } from '../state/system';
 import { Button } from '../components/ui/Button';
 import { Segmented } from '../components/ui/Segmented';
 
@@ -14,6 +14,7 @@ const THEMES = [
 
 export function SettingsPage() {
   const system = useSystem();
+  const [feed, setFeed] = useMarketFeed();
   const [global, globalStore] = useGlobalContext();
   const deck = useActiveDeck();
   const actions = useDeckActions();
@@ -90,6 +91,25 @@ export function SettingsPage() {
           </label>
           <Button onClick={() => void actions.save()}>SAVE DECK NOW</Button>
         </div>
+      </section>
+
+      <section className="card">
+        <h2>MARKET FEED</h2>
+        <Segmented
+          label="Market data source"
+          size="md"
+          value={feed}
+          options={[
+            { value: 'demo', label: 'DEMO FEED', hint: 'Simulated prices, labelled everywhere' },
+            { value: 'live', label: 'LIVE DATA', hint: 'GeckoTerminal public API' },
+          ]}
+          onChange={setFeed}
+        />
+        <p className="faint" style={{ margin: 0, fontSize: 'var(--text-3xs)' }}>
+          {feed === 'live'
+            ? 'Prices, charts and liquidity come from the live provider. If it fails or rate-limits, the deck falls back to simulated data and says so — it never shows stale numbers as live ones.'
+            : 'Every market value is simulated. Transactions remain simulated regardless of this setting until an execution wallet is connected.'}
+        </p>
       </section>
 
       <section className="card">

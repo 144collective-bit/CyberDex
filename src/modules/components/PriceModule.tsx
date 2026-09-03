@@ -6,6 +6,9 @@ import { useTokenMarket } from '../../state/marketHooks';
 import { useModuleInputs, useModuleOutputs } from '../../state/moduleIO';
 import { compactNumber, formatPct, formatPrice, formatRelative } from '../../utils/format';
 
+/** A quote older than this is called out rather than shown as current. */
+const STALE_AFTER_MS = 90_000;
+
 export function Component({ module }: { module: ModuleInstance }) {
   const inputs = useModuleInputs(module.id);
   const [global] = useGlobalContext();
@@ -43,12 +46,20 @@ export function Component({ module }: { module: ModuleInstance }) {
   }
 
   const tone = market.change24hPct >= 0 ? 'up' : 'down';
+  const stale = Date.now() - market.updatedAt > STALE_AFTER_MS;
 
   return (
     <>
       <div className="spread">
         <span className="label">{token.symbol} / USD</span>
-        {market.simulated ? <SimulatedTag label="DEMO" /> : null}
+        <span className="row" style={{ gap: 'var(--space-2)' }}>
+          {stale ? (
+            <span className="chip" data-tone="warning" title="This price has not refreshed recently">
+              STALE
+            </span>
+          ) : null}
+          {market.simulated ? <SimulatedTag label="DEMO" /> : null}
+        </span>
       </div>
       <Stat label="PRICE" value={formatPrice(market.priceUsd)} tone={tone} size="lg" />
       <div className="row wrap" style={{ gap: 'var(--space-6)' }}>
@@ -57,7 +68,7 @@ export function Component({ module }: { module: ModuleInstance }) {
         <Stat label="VOL 24H" value={`$${compactNumber(market.volume24hUsd)}`} size="sm" />
         <Stat label="LIQ" value={`$${compactNumber(market.liquidityUsd)}`} size="sm" />
       </div>
-      <div className="faint" style={{ fontSize: 'var(--text-3xs)' }}>
+      <div className={stale ? 'down' : 'faint'} style={{ fontSize: 'var(--text-3xs)' }}>
         UPDATED {formatRelative(market.updatedAt)} AGO
       </div>
     </>

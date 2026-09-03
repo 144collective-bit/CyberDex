@@ -14,6 +14,10 @@ import { EvmChainProvider } from '../services/chain/EvmChainProvider';
 import { DemoDexAdapter } from '../services/dex/adapters/DemoDexAdapter';
 import { RoutingEngine } from '../services/dex/RoutingEngine';
 import { DemoMarketDataProvider } from '../services/market/DemoMarketDataProvider';
+import { GeckoTerminalProvider } from '../services/market/GeckoTerminalProvider';
+import { ResilientMarketProvider } from '../services/market/ResilientMarketProvider';
+import { MarketDataSwitch } from '../services/market/MarketDataSwitch';
+import type { FeedMode } from '../services/market/MarketDataSwitch';
 import type { MarketDataProvider } from '../services/market/MarketDataProvider';
 import { NETWORKS } from '../services/market/tokens';
 import { NotificationCenter } from '../services/notifications/NotificationCenter';
@@ -30,6 +34,8 @@ export interface System {
   bus: EventBus;
   storage: PersistenceAdapter;
   market: MarketDataProvider;
+  /** Lets settings flip between the demo feed and the live one at runtime. */
+  marketSwitch: MarketDataSwitch;
   routing: RoutingEngine;
   wallets: WalletService;
   portfolio: PortfolioService;
@@ -60,7 +66,11 @@ export function createSystem(options: { storage?: PersistenceAdapter; bus?: Even
     );
   const storage = options.storage ?? createDefaultAdapter(reportStorageFailure);
 
-  const market = new DemoMarketDataProvider();
+  const demoMarket = new DemoMarketDataProvider();
+  // Live data with the demo feed behind it: an outage degrades to clearly
+  // labelled simulated data instead of an empty terminal.
+  const liveMarket = new ResilientMarketProvider(new GeckoTerminalProvider(), demoMarket, bus);
+  const market = new MarketDataSwitch(demoMarket, liveMarket);
   const routing = new RoutingEngine();
   // Venues differ in fee and depth so route comparison is meaningful.
   routing.register(
@@ -162,6 +172,7 @@ export function createSystem(options: { storage?: PersistenceAdapter; bus?: Even
     bus,
     storage,
     market,
+    marketSwitch: market,
     routing,
     wallets,
     portfolio,
@@ -191,10 +202,15 @@ export function SystemProvider({ system, children }: { system: System; children:
         system.ledger.hydrate(),
         system.alerts.hydrate(),
       ]);
-      const prefs = await system.storage.get<{ theme: string; density: 'compact' | 'normal' | 'comfortable' }>(
-        STORAGE_KEYS.preferences,
-      );
-      if (prefs && !cancelled) system.global.set({ theme: prefs.theme, density: prefs.density });
+      const prefs = await system.storage.get<{
+        theme: string;
+        density: 'compact' | 'normal' | 'comfortable';
+        feed?: FeedMode;
+      }>(STORAGE_KEYS.preferences);
+      if (prefs && !cancelled) {
+        system.global.set({ theme: prefs.theme, density: prefs.density });
+        if (prefs.feed) system.marketSwitch.setMode(prefs.feed);
+      }
       const active = system.wallets.getActiveWallet();
       if (active && !cancelled) {
         system.global.set({ chainId: active.chainId, demoMode: active.kind !== 'injected' });
@@ -244,8 +260,15 @@ export function SystemProvider({ system, children }: { system: System; children:
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.density = density;
-    void system.storage.set(STORAGE_KEYS.preferences, { theme, density });
-  }, [theme, density, system]);
+    // Only persist once hydration has restored the stored preferences —
+    // writing on mount would overwrite them with defaults.
+    if (!ready) return;
+    void system.storage.set(STORAGE_KEYS.preferences, {
+      theme,
+      density,
+      feed: system.marketSwitch.getMode(),
+    });
+  }, [theme, density, system, ready]);
 
   if (!ready) {
     return (
@@ -316,6 +339,33 @@ export function useNetworkTelemetry(chainId: number) {
 
   const network = useMemo(() => NETWORKS[chainId] ?? null, [chainId]);
   return { gas: snapshot.gas, status: snapshot.status, error: snapshot.error, network };
+}
+
+/** Current market feed (demo or live) and a setter that persists the choice. */
+export function useMarketFeed() {
+  const system = useSystem();
+  const subscribe = useCallback((listener: () => void) => system.marketSwitch.subscribeMode(listener), [system]);
+  const getSnapshot = useCallback(() => system.marketSwitch.getMode(), [system]);
+  const mode = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  const setMode = useCallback(
+    (next: FeedMode) => {
+      system.marketSwitch.setMode(next);
+      const { theme, density } = system.global.getState();
+      void system.storage.set(STORAGE_KEYS.preferences, { theme, density, feed: next });
+      system.notifications.push({
+        kind: next === 'live' ? 'info' : 'warning',
+        title: next === 'live' ? 'LIVE MARKET DATA ENABLED' : 'DEMO FEED ENABLED',
+        detail:
+          next === 'live'
+            ? 'Prices and charts now come from the live provider.'
+            : 'All market values are simulated and labelled as such.',
+      });
+    },
+    [system],
+  );
+
+  return [mode, setMode] as const;
 }
 
 /** Undo/redo availability, kept in sync with the workspace store. */
