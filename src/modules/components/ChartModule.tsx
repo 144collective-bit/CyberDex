@@ -13,7 +13,21 @@ interface Config extends Record<string, unknown> {
   timeframe: Timeframe;
   style: 'candles' | 'line';
   showVolume: boolean;
+  /** Empty means no overlay; the periods are the trader's, not ours. */
+  movingAverages?: number[];
 }
+
+/**
+ * Fast and slow, in that order. Two lines is the most a module this size can
+ * carry before the candles stop being the subject of the chart.
+ */
+const MA_PRESETS: { value: string; label: string; periods: number[] }[] = [
+  { value: 'off', label: 'OFF', periods: [] },
+  { value: 'fast', label: 'MA 7/25', periods: [7, 25] },
+  { value: 'slow', label: 'MA 25/99', periods: [25, 99] },
+];
+
+const MA_COLORS = ['var(--accent-2)', 'var(--warning)'];
 
 export function Component({ module }: { module: ModuleInstance }) {
   const inputs = useModuleInputs(module.id);
@@ -33,6 +47,19 @@ export function Component({ module }: { module: ModuleInstance }) {
     change: changePct,
     series: data ?? null,
   });
+
+  const maPeriods = config.movingAverages ?? [];
+  const maPreset =
+    MA_PRESETS.find(
+      (preset) =>
+        preset.periods.length === maPeriods.length &&
+        preset.periods.every((period, index) => period === maPeriods[index]),
+    )?.value ?? 'off';
+
+  const movingAverages = useMemo(
+    () => maPeriods.map((period, index) => ({ period, color: MA_COLORS[index] ?? 'var(--text-muted)' })),
+    [maPeriods],
+  );
 
   const controls = useMemo(
     () => (
@@ -62,6 +89,14 @@ export function Component({ module }: { module: ModuleInstance }) {
           onChange={(style) => setConfig({ style })}
         />
         <Segmented
+          label="Moving averages"
+          value={maPreset}
+          options={MA_PRESETS.map((preset) => ({ value: preset.value, label: preset.label }))}
+          onChange={(value) =>
+            setConfig({ movingAverages: MA_PRESETS.find((preset) => preset.value === value)?.periods ?? [] })
+          }
+        />
+        <Segmented
           label="Volume"
           value={config.showVolume ? 'on' : 'off'}
           options={[
@@ -72,7 +107,7 @@ export function Component({ module }: { module: ModuleInstance }) {
         />
       </div>
     ),
-    [timeframe, config.style, config.showVolume, setConfig, inputs.timeframe],
+    [timeframe, config.style, config.showVolume, setConfig, inputs.timeframe, maPreset],
   );
 
   if (!pair) {
@@ -98,6 +133,8 @@ export function Component({ module }: { module: ModuleInstance }) {
             label={`${pair.label} · ${timeframe}`}
             showVolume={config.showVolume}
             style={config.style}
+            timeframe={timeframe}
+            movingAverages={movingAverages}
           />
         )}
       </div>

@@ -177,6 +177,36 @@ says so. A quote that has not refreshed within 90s is marked STALE.
 To add a backend, implement `MarketDataProvider` and register it in `createSystem`. No
 module changes: modules only know the interface.
 
+## The chart
+
+Hand-drawn SVG rather than a charting dependency, so it resizes with its module,
+uses the terminal's own tokens, and stays cheap enough to run several per deck.
+
+- **Both axes are labelled.** Price ticks are snapped to 1, 2, 2.5 or 5 times a
+  power of ten, and the gridlines are drawn on those ticks — so a line means a
+  number, rather than sitting at an arbitrary fraction of the height. Each label
+  carries only the decimals its own step resolves: a gridline every 10 reads
+  `120`, not `120.0000`, while a 0.25 step keeps both places so neighbouring
+  ticks stay distinguishable. Sub-milli prices fall back to subscript notation.
+- **Time labels match the timeframe** — clock times intraday, dates on the daily
+  and weekly, since a weekly chart labelled with clock times says 00:00 all the
+  way across. The end labels anchor inward instead of being clipped by the frame.
+- **The crosshair is measured, not decorative.** It tags its own price on the
+  price axis and its own time on the time axis, alongside the OHLC readout.
+- **The last close is tagged** on the axis in the direction colour of the final
+  candle.
+- **Moving averages** overlay as MA 7/25 or MA 25/99. Positions before the window
+  is full are drawn as nothing rather than a partial average — an MA(25) from
+  three candles is not an MA(25).
+- Series are cached for 20s, keyed by feed, pair, timeframe and limit, and shared
+  across every chart on the deck. Flipping a timeframe and coming back is free,
+  two charts on the same pair are one request, and the feed in the key means one
+  feed's candles can never appear under another's name. Empty answers are not
+  cached — that is a result to retry, not to remember.
+
+At 260×170 it degrades to one price tick and two time labels rather than
+crowding; the last-price tag survives at every size.
+
 ## Moving modules
 
 Dragging a module by its header is the primary way a deck gets built, so the gesture is

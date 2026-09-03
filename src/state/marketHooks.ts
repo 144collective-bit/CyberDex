@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type {
   Candle,
   PairRef,
@@ -10,6 +10,7 @@ import type {
 } from '../core/types';
 import type { LiquiditySnapshot } from '../services/market/MarketDataProvider';
 import { useSystem } from './system';
+import { SeriesCache } from '../services/market/SeriesCache';
 
 export interface AsyncValue<T> {
   data: T | null;
@@ -38,13 +39,30 @@ export function useTokenMarket(token: TokenRef | null | undefined): TokenMarket 
   return market;
 }
 
+/**
+ * Shared across every chart on the deck: two charts on the same pair and
+ * timeframe are one request, and flipping a timeframe back and forth inside the
+ * TTL costs nothing.
+ */
+const seriesCache = new SeriesCache();
+
 export function useOHLC(pair: PairRef | null | undefined, timeframe: Timeframe, limit = 160): AsyncValue<Candle[]> {
   const system = useSystem();
   const [state, setState] = useState<AsyncValue<Candle[]>>({ data: null, loading: Boolean(pair), error: null });
+  // The active feed is part of the cache key, so a mode change cannot serve one
+  // feed's candles under another's name.
+  const feedId = useSyncExternalStore(system.marketSwitch.subscribeMode, system.marketSwitch.getMode);
+  const pairId = pair?.id ?? '';
 
   useEffect(() => {
     if (!pair) {
       setState({ data: null, loading: false, error: null });
+      return;
+    }
+    const key = SeriesCache.key(feedId, pairId, timeframe, limit);
+    const cached = seriesCache.get(key);
+    if (cached) {
+      setState({ data: cached, loading: false, error: null });
       return;
     }
     let cancelled = false;
@@ -52,6 +70,9 @@ export function useOHLC(pair: PairRef | null | undefined, timeframe: Timeframe, 
     system.market
       .getOHLC(pair, timeframe, limit)
       .then((candles) => {
+        // Only a real series is worth caching; an empty answer should be retried
+        // rather than remembered for the next twenty seconds.
+        if (candles.length) seriesCache.set(key, candles);
         if (!cancelled) setState({ data: candles, loading: false, error: null });
       })
       .catch((err: unknown) => {
@@ -62,7 +83,10 @@ export function useOHLC(pair: PairRef | null | undefined, timeframe: Timeframe, 
     return () => {
       cancelled = true;
     };
-  }, [system, pair, timeframe, limit]);
+    // `pair` is excluded deliberately: it is keyed by id, and a fresh object for
+    // the same pair should not refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [system, pairId, timeframe, limit, feedId]);
 
   return state;
 }
