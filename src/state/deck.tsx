@@ -118,6 +118,9 @@ interface DeskUI {
   draft: LinkDraft | null;
   dragPreview: DragPreview | null;
   setDragPreview(preview: DragPreview | null): void;
+  /** Enlarges and labels every port, so links are findable. */
+  linkMode: boolean;
+  toggleLinkMode(): void;
   select(moduleId: string | null): void;
   selectLink(linkId: string | null): void;
   setFullscreen(moduleId: string | null): void;
@@ -134,6 +137,7 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
   const [fullscreenModuleId, setFullscreenModuleId] = useState<string | null>(null);
   const [draft, setDraft] = useState<LinkDraft | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
+  const [linkMode, setLinkMode] = useState(false);
 
   const value = useMemo<DeskUI>(
     () => ({
@@ -143,6 +147,8 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
       draft,
       dragPreview,
       setDragPreview,
+      linkMode,
+      toggleLinkMode: () => setLinkMode((prev) => !prev),
       select: (moduleId) => {
         setSelectedModuleId(moduleId);
         setSelectedLinkId(null);
@@ -156,7 +162,7 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
       moveLink: (x, y) => setDraft((prev) => (prev ? { ...prev, x, y } : prev)),
       endLink: () => setDraft(null),
     }),
-    [selectedModuleId, selectedLinkId, fullscreenModuleId, draft, dragPreview],
+    [selectedModuleId, selectedLinkId, fullscreenModuleId, draft, dragPreview, linkMode],
   );
 
   return <DeskUIContext.Provider value={value}>{children}</DeskUIContext.Provider>;

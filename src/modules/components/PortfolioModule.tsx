@@ -8,6 +8,7 @@ import { useActiveWallet, useGlobalContext, useSystem } from '../../state/system
 import { usePortfolio } from '../../state/marketHooks';
 import { useModuleConfig, useModuleInputs, useModuleOutputs } from '../../state/moduleIO';
 import { formatAmount, formatPct, formatUsd } from '../../utils/format';
+import { Button } from '../../components/ui/Button';
 
 interface Config extends Record<string, unknown> {
   sort: 'value' | 'amount' | 'symbol';
@@ -54,6 +55,11 @@ export function Component({ module }: { module: ModuleInstance }) {
       <EmptyState
         title="NO WALLET CONNECTED"
         message="Connect a wallet to activate portfolio data, or link a Wallet module into this one."
+        action={
+          <Button variant="primary" onClick={() => system.wallets.addDemoWallet()}>
+            USE A DEMO WALLET
+          </Button>
+        }
       />
     );
   }
@@ -66,8 +72,9 @@ export function Component({ module }: { module: ModuleInstance }) {
         <Stat
           label="TOTAL VALUE"
           value={formatUsd(data?.totalValueUsd ?? 0, { compact: true })}
-          size="lg"
+          size="xl"
           sub={wallet.label}
+          flashOn={data?.totalValueUsd ?? null}
         />
         <div className="col" style={{ alignItems: 'flex-end', gap: 2 }}>
           <span className={`mono-num ${(data?.change24hPct ?? 0) >= 0 ? 'up' : 'down'}`}>

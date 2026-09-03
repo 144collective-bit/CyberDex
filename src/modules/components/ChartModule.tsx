@@ -79,7 +79,7 @@ export function Component({ module }: { module: ModuleInstance }) {
     return (
       <EmptyState
         title="NO PAIR SELECTED"
-        message="Connect a Pair Selector to this chart, or pick a pair in the workspace."
+        message="Wire a Pair Selector into this chart, or pick a pair from the top bar. Press L to see every port on the deck."
       />
     );
   }

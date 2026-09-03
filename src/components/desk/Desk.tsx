@@ -133,6 +133,12 @@ export function Desk({ onAddModule }: { onAddModule: () => void }) {
         }
       }
 
+      if (!typing && (event.key === 'l' || event.key === 'L') && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault();
+        ui.toggleLinkMode();
+        return;
+      }
+
       if (event.key !== 'Delete' && event.key !== 'Backspace') return;
       if (typing) return;
       if (ui.selectedLinkId) {
@@ -151,6 +157,7 @@ export function Desk({ onAddModule }: { onAddModule: () => void }) {
     <div
       className="desk"
       data-dragging={Boolean(ui.draft)}
+      data-link-mode={ui.linkMode ? 'true' : undefined}
       onPointerDown={(event) => {
         if (event.target === event.currentTarget || (event.target as HTMLElement).classList.contains('desk-canvas')) {
           ui.select(null);
@@ -158,6 +165,24 @@ export function Desk({ onAddModule }: { onAddModule: () => void }) {
         }
       }}
     >
+      <div className="desk-tools">
+        <button
+          type="button"
+          className="btn"
+          data-variant={ui.linkMode ? 'primary' : 'default'}
+          data-active={ui.linkMode}
+          onClick={ui.toggleLinkMode}
+          title="Show every connection port (L)"
+        >
+          ⧉ LINK MODE <span className="kbd">L</span>
+        </button>
+        {ui.linkMode ? (
+          <span className="desk-tools-hint">
+            Drag from an output port to a compatible input to connect two modules.
+          </span>
+        ) : null}
+      </div>
+
       <div
         ref={canvasRef}
         className="desk-canvas"

@@ -1,8 +1,10 @@
 export function formatUsd(value: number | null | undefined, options: { compact?: boolean; decimals?: number } = {}): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
   const abs = Math.abs(value);
-  // A real-but-negligible cost reads as "<$0.01", never as a flat $0.00.
-  if (abs > 0 && abs < 0.005) return value > 0 ? '<$0.01' : '>-$0.01';
+  // Exact zero is a clean $0.00; a real-but-negligible cost reads as "<$0.01",
+  // never as a flat $0.00 that hides a nonzero fee.
+  if (value === 0) return '$0.00';
+  if (abs < 0.005) return value > 0 ? '<$0.01' : '>-$0.01';
   if (options.compact && abs >= 1000) {
     return `$${compactNumber(value)}`;
   }
@@ -33,13 +35,45 @@ export function formatAmount(value: number | null | undefined, decimals?: number
   return value.toLocaleString(undefined, { maximumFractionDigits: dp });
 }
 
+const SUBSCRIPT_DIGITS = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+
+function subscript(count: number): string {
+  return String(count)
+    .split('')
+    .map((digit) => SUBSCRIPT_DIGITS[Number(digit)] ?? digit)
+    .join('');
+}
+
+/**
+ * Compact notation for tokens with many leading zeros.
+ *
+ * On PulseChain most prices look like 0.00001025, which is slow to read and
+ * wastes width in a dense terminal. The convention used across this ecosystem
+ * writes the run of zeros as a subscript count: 0.0₄1025.
+ */
+export function formatSubscriptNumber(value: number, significantDigits = 4): string {
+  const abs = Math.abs(value);
+  if (abs === 0) return '0';
+  const [mantissa, exponentPart] = abs.toExponential(significantDigits - 1).split('e');
+  const exponent = Number(exponentPart);
+  const digits = (mantissa ?? '').replace('.', '').replace(/0+$/, '') || '0';
+  // Zeros sit between the decimal point and the first significant digit.
+  const zeros = -exponent - 1;
+  const sign = value < 0 ? '-' : '';
+  if (zeros < 1) return `${sign}${abs.toPrecision(significantDigits)}`;
+  if (zeros < 3) return `${sign}0.${'0'.repeat(zeros)}${digits}`;
+  return `${sign}0.0${subscript(zeros)}${digits}`;
+}
+
 export function formatPrice(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
   const abs = Math.abs(value);
-  if (abs === 0) return '0';
-  if (abs >= 1) return `$${value.toFixed(abs >= 1000 ? 2 : 4)}`;
-  // Sub-dollar tokens need significant figures, not fixed decimals.
-  return `$${value.toPrecision(4)}`;
+  if (abs === 0) return '$0';
+  if (abs >= 1000) return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  if (abs >= 1) return `$${value.toFixed(4)}`;
+  if (abs >= 0.001) return `$${value.toPrecision(4)}`;
+  // Long runs of zeros collapse into subscript notation.
+  return `$${formatSubscriptNumber(value)}`;
 }
 
 export function formatPct(value: number | null | undefined, digits = 2): string {
@@ -59,9 +93,11 @@ export function formatImpact(value: number | null | undefined): string {
 
 export function formatRatio(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
-  if (value >= 1000) return compactNumber(value);
-  if (value >= 1) return value.toFixed(4);
-  return value.toPrecision(4);
+  const abs = Math.abs(value);
+  if (abs >= 1000) return compactNumber(value);
+  if (abs >= 1) return value.toFixed(4);
+  if (abs >= 0.001) return value.toPrecision(4);
+  return formatSubscriptNumber(value);
 }
 
 export function formatTime(ts: number): string {

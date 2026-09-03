@@ -23,7 +23,7 @@ export function Component({ module }: { module: ModuleInstance }) {
         <span className="label">NETWORK FEE</span>
         {gas.simulated ? <SimulatedTag label="DEMO" /> : null}
       </div>
-      <Stat label="GAS" value={`${gas.baseFeeGwei.toFixed(2)} GWEI`} size="lg" />
+      <Stat label="GAS" value={`${gas.baseFeeGwei.toFixed(2)} GWEI`} size="lg" flashOn={gas.baseFeeGwei} />
       <div className="row wrap" style={{ gap: 'var(--space-6)' }}>
         <Stat label="PRIORITY" value={`${gas.priorityFeeGwei.toFixed(2)}`} size="sm" />
         <Stat label="BLOCK" value={gas.blockNumber.toLocaleString()} size="sm" />

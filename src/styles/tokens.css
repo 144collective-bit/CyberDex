@@ -21,6 +21,12 @@
   --text-2xl: 25px;
   --text-3xl: 34px;
 
+  /* Values are read, labels are scanned: they get different treatments. */
+  --value-sm: 13px;
+  --value-md: 17px;
+  --value-lg: 22px;
+  --value-xl: 30px;
+
   --tracking-wide: 0.12em;
   --tracking-wider: 0.2em;
   --leading-tight: 1.15;
@@ -86,7 +92,7 @@
 
   --text: #d8e4ef;
   --text-secondary: #8899a9;
-  --text-muted: #5b6875;
+  --text-muted: #75828f; /* 4.7:1 on surface-raised */
   --text-inverse: #04070a;
 
   --accent: #35e6c0;
@@ -135,7 +141,7 @@
   --border-faint: #102217;
   --text: #ccf8dd;
   --text-secondary: #7fae92;
-  --text-muted: #4f7460;
+  --text-muted: #68907a; /* 5.1:1 on surface-raised */
   --text-inverse: #02100a;
   --accent: #4dff9a;
   --accent-dim: #1f9c5c;
@@ -178,7 +184,7 @@
   --border-faint: #241a0b;
   --text: #f2dcc0;
   --text-secondary: #b09578;
-  --text-muted: #7a6650;
+  --text-muted: #8d7a63; /* 4.5:1 on surface-raised */
   --text-inverse: #120c04;
   --accent: #ffb347;
   --accent-dim: #b87a20;
@@ -221,7 +227,7 @@
   --border-faint: #121d29;
   --text: #dbeaf8;
   --text-secondary: #8ba4bb;
-  --text-muted: #5c7185;
+  --text-muted: #728799; /* 4.8:1 on surface-raised */
   --text-inverse: #04070c;
   --accent: #78d2ff;
   --accent-dim: #2f7fae;

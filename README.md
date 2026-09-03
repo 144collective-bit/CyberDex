@@ -211,11 +211,35 @@ data attributes against design tokens, so themes and density need no component c
 
 `⌘/Ctrl + K` command palette · `⌘/Ctrl + M` module library · `⌘/Ctrl + S` save deck ·
 `⌘/Ctrl + D` new deck · `⌘/Ctrl + Z` undo · `⇧⌘/Ctrl + Z` redo ·
-`Delete` remove selected module or link · `Esc` close.
+`L` link mode · `Delete` remove selected module or link · `Esc` close.
+
+### Reading the deck
+
+A circuit you cannot see is a circuit you cannot debug, so the ports are made findable
+rather than discoverable by accident:
+
+- **Link mode** (`L`, or the button on the desk toolbar) enlarges every port on every
+  module and shows its label, turning the deck into a wiring diagram for as long as you
+  hold the mode. Selecting a single module reveals just that module's port labels.
+- **Numbers are typed, not uniform.** A `.value` carries a size step — the price a module
+  exists to show is `xl`, its supporting figures are `sm` — so a module has one obvious
+  subject. Values are tabular-figure aligned and never uppercased.
+- **Sub-cent prices use subscript-zero notation**: `$0.0₄3561` instead of `$0.000035610`,
+  the convention traders already read. Four significant digits survive at any magnitude.
+- **Price changes flash** green up / red down for a beat on the value itself, so a tick is
+  visible without watching the number. The flash never fires on first render, only on a
+  real change.
 
 Undo covers every deck edit — deleting a module restores it with all of its links.
 Continuous edits (typing in Notes, dragging a module) collapse into one step, and
 switching deck or raising a module is not treated as an edit.
+
+### Contrast
+
+Secondary text is the easiest thing to lose in a dark theme. `--text-muted` was measured
+against `--surface-1` in every theme and raised until all four clear WCAG AA for body
+text — cyber-dark 5.35:1, cyber-green 5.86:1, cyber-amber 5.10:1, ice 5.64:1. The
+measurement is a browser check against the computed tokens, not an eyeball.
 
 ## Tests and CI
 

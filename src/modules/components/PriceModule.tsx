@@ -61,7 +61,13 @@ export function Component({ module }: { module: ModuleInstance }) {
           {market.simulated ? <SimulatedTag label="DEMO" /> : null}
         </span>
       </div>
-      <Stat label="PRICE" value={formatPrice(market.priceUsd)} tone={tone} size="lg" />
+      <Stat
+        label="PRICE"
+        value={formatPrice(market.priceUsd)}
+        tone={tone}
+        size="xl"
+        flashOn={market.priceUsd}
+      />
       <div className="row wrap" style={{ gap: 'var(--space-6)' }}>
         <Stat label="24H" value={formatPct(market.change24hPct)} tone={tone} size="sm" />
         <Stat label="7D" value={formatPct(market.change7dPct)} tone={market.change7dPct >= 0 ? 'up' : 'down'} size="sm" />

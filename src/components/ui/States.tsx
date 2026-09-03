@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useValueFlash } from './useValueFlash';
 import { Button } from './Button';
 
 /**
@@ -57,25 +58,39 @@ export function LoadingState({ label = 'LOADING' }: { label?: string }) {
   );
 }
 
+/**
+ * A labelled number.
+ *
+ * The label is small, uppercase and quiet; the value is large, mixed case and
+ * tabular. Pass `flashOn` and the value flashes green or red when it moves,
+ * the way a trading terminal signals a tick.
+ */
 export function Stat({
   label,
   value,
   tone,
   sub,
   size = 'md',
+  flashOn,
 }: {
   label: string;
   value: ReactNode;
   tone?: 'up' | 'down' | 'flat';
   sub?: ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Numeric value behind the display string, watched for movement. */
+  flashOn?: number | null;
 }) {
-  const color = tone === 'up' ? 'var(--up)' : tone === 'down' ? 'var(--down)' : 'var(--text)';
-  const fontSize = size === 'lg' ? 'var(--text-xl)' : size === 'sm' ? 'var(--text-xs)' : 'var(--text-lg)';
+  const flash = useValueFlash(flashOn);
   return (
     <div className="col" style={{ gap: 2, minWidth: 0 }}>
       <span className="label">{label}</span>
-      <span className="mono-num truncate" style={{ fontSize, color, lineHeight: 1.1 }}>
+      <span
+        className="value truncate"
+        data-size={size}
+        data-tone={tone === 'up' || tone === 'down' ? tone : undefined}
+        data-flash={flash ?? undefined}
+      >
         {value}
       </span>
       {sub ? <span className="faint truncate" style={{ fontSize: 'var(--text-3xs)' }}>{sub}</span> : null}

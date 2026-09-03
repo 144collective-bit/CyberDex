@@ -14,7 +14,14 @@ export function Component({ module }: { module: ModuleInstance }) {
 
   useModuleOutputs(module.id, { liquidity: data?.totalUsd ?? null });
 
-  if (!pair) return <EmptyState title="NO PAIR" message="Link a pair to inspect pool depth." />;
+  if (!pair) {
+    return (
+      <EmptyState
+        title="NO PAIR"
+        message="Wire a Pair Selector into this module, or pick a pair from the top bar. Press L to see every port on the deck."
+      />
+    );
+  }
   if (loading && !data) return <LoadingState label="READING POOLS" />;
   if (error || !data) return <EmptyState title="NO LIQUIDITY DATA" message={error ?? 'Indexer returned nothing.'} />;
 

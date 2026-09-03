@@ -41,7 +41,42 @@ button, input, select, textarea { font: inherit; color: inherit; }
   letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
   color: var(--text-muted);
+  white-space: nowrap;
 }
+
+/*
+ * Numbers the user is actually reading. Never uppercased, always tabular, and
+ * sized well above the labels around them so a deck has a clear focal order.
+ */
+.value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: var(--leading-tight);
+  color: var(--text);
+  text-transform: none;
+}
+.value[data-size='sm'] { font-size: var(--value-sm); }
+.value[data-size='md'] { font-size: var(--value-md); }
+.value[data-size='lg'] { font-size: var(--value-lg); }
+.value[data-size='xl'] { font-size: var(--value-xl); }
+.value[data-tone='up'] { color: var(--up); }
+.value[data-tone='down'] { color: var(--down); }
+
+/*
+ * Price flash: the standard trading-terminal signal that a number just moved.
+ * Suppressed under prefers-reduced-motion by the global rule at the end of
+ * this file.
+ */
+@keyframes flash-up {
+  0% { background: color-mix(in srgb, var(--up) 30%, transparent); }
+  100% { background: transparent; }
+}
+@keyframes flash-down {
+  0% { background: color-mix(in srgb, var(--down) 30%, transparent); }
+  100% { background: transparent; }
+}
+.value[data-flash='up'] { animation: flash-up 700ms var(--ease); }
+.value[data-flash='down'] { animation: flash-down 700ms var(--ease); }
 
 .mono-num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 
@@ -575,6 +610,31 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .resize-edge[data-edge='e'] { top: 0; right: 0; width: 5px; height: 100%; cursor: ew-resize; }
 .resize-edge[data-edge='s'] { bottom: 0; left: 0; height: 5px; width: 100%; cursor: ns-resize; }
 
+/* Floating desk controls */
+.desk-tools {
+  position: sticky;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: var(--z-chrome);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: max-content;
+  max-width: calc(100% - var(--space-8));
+  padding: var(--space-2);
+  margin: var(--space-4) 0 0 var(--space-4);
+  background: color-mix(in srgb, var(--surface-overlay) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(4px);
+}
+.desk-tools-hint {
+  padding-right: var(--space-3);
+  font-size: var(--text-3xs);
+  color: var(--text-secondary);
+}
+
 /* ports */
 .ports { position: absolute; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); pointer-events: none; }
 .ports[data-side='in'] { left: -7px; align-items: flex-start; }
@@ -610,6 +670,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .port[data-side='in'] .port-tip { right: calc(100% + 4px); }
 .port[data-side='out'] .port-tip { left: calc(100% + 4px); }
 .port:hover .port-tip { opacity: 1; }
+/* Selecting a module reveals what its ports carry, without a hunt. */
+.module[data-selected='true'] .port-tip { opacity: 1; }
+
+/*
+ * Link mode: every port grows and labels itself. The whole product idea is
+ * that modules connect, and a 13px dot does not communicate that.
+ */
+.desk[data-link-mode='true'] .port {
+  width: 17px;
+  height: 17px;
+  border-color: var(--accent-dim);
+  box-shadow: var(--glow-soft);
+}
+.desk[data-link-mode='true'] .port::after { width: 6px; height: 6px; }
+.desk[data-link-mode='true'] .port-tip { opacity: 1; }
+.desk[data-link-mode='true'] .ports[data-side='in'] { left: -9px; }
+.desk[data-link-mode='true'] .ports[data-side='out'] { right: -9px; }
+.desk[data-link-mode='true'] .module { border-color: var(--border-strong); }
 
 .link-layer { position: absolute; inset: 0; pointer-events: none; z-index: var(--z-links); overflow: visible; }
 .link-path { fill: none; stroke: var(--link); stroke-width: 1.2; }

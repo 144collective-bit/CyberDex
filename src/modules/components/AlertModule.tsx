@@ -121,7 +121,10 @@ export function Component({ module }: { module: ModuleInstance }) {
       </div>
 
       {value === undefined ? (
-        <Warning tone="info">Link a price, ratio or calculator output into VALUE to arm this alert.</Warning>
+        <Warning tone="info">
+          Link a price, ratio or calculator output into VALUE to arm this alert — press L to see
+          every port on the deck.
+        </Warning>
       ) : null}
       <span className="faint" style={{ fontSize: 'var(--text-3xs)' }}>
         Alerts notify. They never place a trade.

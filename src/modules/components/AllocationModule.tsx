@@ -5,6 +5,7 @@ import { useActiveWallet, useGlobalContext, useSystem } from '../../state/system
 import { usePortfolio } from '../../state/marketHooks';
 import { useModuleInputs, useModuleOutputs } from '../../state/moduleIO';
 import { formatUsd } from '../../utils/format';
+import { Button } from '../../components/ui/Button';
 
 export function Component({ module }: { module: ModuleInstance }) {
   const system = useSystem();
@@ -17,7 +18,17 @@ export function Component({ module }: { module: ModuleInstance }) {
   useModuleOutputs(module.id, { token: data?.holdings[0]?.token ?? null });
 
   if (!wallet) {
-    return <EmptyState title="NO WALLET" message="Connect or link a wallet to see how it is allocated." />;
+    return (
+      <EmptyState
+        title="NO WALLET"
+        message="Connect or link a wallet to see how it is allocated."
+        action={
+          <Button variant="primary" onClick={() => system.wallets.addDemoWallet()}>
+            USE A DEMO WALLET
+          </Button>
+        }
+      />
+    );
   }
   if (loading && !data) return <LoadingState label="COMPUTING ALLOCATION" />;
 
