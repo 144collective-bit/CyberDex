@@ -40,6 +40,15 @@ describe('WorkspaceStore persistence', () => {
     expect(store.getActiveDeck()?.name).toBe('PERSISTED');
   });
 
+  it('reports a pending debounced write so callers can flush before unload', async () => {
+    const store = new WorkspaceStore(seed(), new MemoryAdapter(), new EventBus(), 400);
+    expect(store.hasPendingWrite()).toBe(false);
+    store.dispatch({ type: 'MODULE/ADD', deckId: store.getState().activeDeckId, moduleType: MODULE_TYPES.gas });
+    expect(store.hasPendingWrite()).toBe(true);
+    await store.flush();
+    expect(store.hasPendingWrite()).toBe(false);
+  });
+
   it('notifies subscribers on change and emits module events', () => {
     const bus = new EventBus();
     const store = new WorkspaceStore(seed(), new MemoryAdapter(), bus, 0);

@@ -221,3 +221,90 @@ describe('deckReducer — decks', () => {
     expect(next.lastError).toMatch(/last deck/);
   });
 });
+
+describe('deckReducer — swapping slots', () => {
+  function twoModules() {
+    let state = baseState();
+    const deckId = state.activeDeckId;
+    state = deckReducer(state, {
+      type: 'MODULE/ADD',
+      deckId,
+      moduleType: MODULE_TYPES.price,
+      overrides: { position: { x: 0, y: 0 }, size: { width: 200, height: 160 } },
+    });
+    state = deckReducer(state, {
+      type: 'MODULE/ADD',
+      deckId,
+      moduleType: MODULE_TYPES.gas,
+      overrides: { position: { x: 400, y: 300 }, size: { width: 260, height: 200 } },
+    });
+    const [a, b] = activeDeck(state)!.modules;
+    return { state, deckId, a: a!, b: b! };
+  }
+
+  it('exchanges both position and size so the slots truly swap', () => {
+    const { state, deckId, a, b } = twoModules();
+    const next = deckReducer(state, { type: 'MODULE/SWAP', deckId, moduleId: a.id, targetId: b.id });
+    const [movedA, movedB] = activeDeck(next)!.modules;
+    expect(movedA.position).toEqual({ x: 400, y: 300 });
+    expect(movedA.size).toEqual({ width: 260, height: 200 });
+    expect(movedB.position).toEqual({ x: 0, y: 0 });
+    expect(movedB.size).toEqual({ width: 200, height: 160 });
+  });
+
+  it('keeps every link intact through a swap', () => {
+    let { state, deckId, a, b } = twoModules();
+    state = deckReducer(state, { type: 'MODULE/ADD', deckId, moduleType: MODULE_TYPES.pairSelector });
+    const pair = activeDeck(state)!.modules[2]!;
+    state = deckReducer(state, {
+      type: 'LINK/CONNECT',
+      deckId,
+      source: { moduleId: pair.id, portId: 'pair' },
+      target: { moduleId: a.id, portId: 'pair' },
+    });
+    const before = activeDeck(state)!.connections;
+    state = deckReducer(state, { type: 'MODULE/SWAP', deckId, moduleId: a.id, targetId: b.id });
+    expect(activeDeck(state)!.connections).toEqual(before);
+  });
+
+  it('refuses to swap a locked module', () => {
+    let { state, deckId, a, b } = twoModules();
+    state = deckReducer(state, { type: 'MODULE/PATCH', deckId, moduleId: b.id, patch: { locked: true } });
+    const next = deckReducer(state, { type: 'MODULE/SWAP', deckId, moduleId: a.id, targetId: b.id });
+    expect(activeDeck(next)!.modules[0]!.position).toEqual({ x: 0, y: 0 });
+  });
+
+  it('ignores a swap with itself or with a module that is gone', () => {
+    const { state, deckId, a } = twoModules();
+    expect(deckReducer(state, { type: 'MODULE/SWAP', deckId, moduleId: a.id, targetId: a.id })).toBe(state);
+    expect(deckReducer(state, { type: 'MODULE/SWAP', deckId, moduleId: a.id, targetId: 'ghost' })).toBe(state);
+  });
+
+  it('is its own inverse', () => {
+    const { state, deckId, a, b } = twoModules();
+    const once = deckReducer(state, { type: 'MODULE/SWAP', deckId, moduleId: a.id, targetId: b.id });
+    const twice = deckReducer(once, { type: 'MODULE/SWAP', deckId, moduleId: a.id, targetId: b.id });
+    expect(activeDeck(twice)!.modules[0]!.position).toEqual({ x: 0, y: 0 });
+    expect(activeDeck(twice)!.modules[1]!.position).toEqual({ x: 400, y: 300 });
+  });
+});
+
+describe('deckReducer — exact moves', () => {
+  it('bypasses grid quantisation when the caller resolved the position', () => {
+    let state = baseState();
+    const deckId = state.activeDeckId;
+    state = deckReducer(state, { type: 'MODULE/ADD', deckId, moduleType: MODULE_TYPES.gas });
+    const moduleId = activeDeck(state)!.modules[0]!.id;
+    state = deckReducer(state, { type: 'MODULE/MOVE', deckId, moduleId, position: { x: 187, y: 213 }, exact: true });
+    expect(activeDeck(state)!.modules[0]!.position).toEqual({ x: 187, y: 213 });
+  });
+
+  it('still clamps an exact move to the canvas', () => {
+    let state = baseState();
+    const deckId = state.activeDeckId;
+    state = deckReducer(state, { type: 'MODULE/ADD', deckId, moduleType: MODULE_TYPES.gas });
+    const moduleId = activeDeck(state)!.modules[0]!.id;
+    state = deckReducer(state, { type: 'MODULE/MOVE', deckId, moduleId, position: { x: -50, y: -20 }, exact: true });
+    expect(activeDeck(state)!.modules[0]!.position).toEqual({ x: 0, y: 0 });
+  });
+});

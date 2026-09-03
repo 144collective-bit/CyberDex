@@ -65,8 +65,10 @@ export function useDeckActions() {
         system.workspace.dispatch({ type: 'MODULE/ADD', deckId, moduleType, overrides }),
       removeModule: (moduleId: string) =>
         system.workspace.dispatch({ type: 'MODULE/REMOVE', deckId, moduleId }),
-      moveModule: (moduleId: string, position: { x: number; y: number }) =>
-        system.workspace.dispatch({ type: 'MODULE/MOVE', deckId, moduleId, position }),
+      moveModule: (moduleId: string, position: { x: number; y: number }, exact?: boolean) =>
+        system.workspace.dispatch({ type: 'MODULE/MOVE', deckId, moduleId, position, exact }),
+      swapModules: (moduleId: string, targetId: string) =>
+        system.workspace.dispatch({ type: 'MODULE/SWAP', deckId, moduleId, targetId }),
       resizeModule: (moduleId: string, size: { width: number; height: number }) =>
         system.workspace.dispatch({ type: 'MODULE/RESIZE', deckId, moduleId, size }),
       patchModule: (moduleId: string, patch: Partial<ModuleInstance>) =>
@@ -91,6 +93,14 @@ export function useDeckActions() {
 
 /* ---------------------------------------------------------------- desk UI */
 
+export interface DragPreview {
+  moduleId: string;
+  /** Where the module would land, after snapping. */
+  rect: { x: number; y: number; width: number; height: number };
+  guides: { orientation: 'v' | 'h'; position: number; from: number; to: number }[];
+  swapTargetId: string | null;
+}
+
 export interface LinkDraft {
   moduleId: string;
   portId: string;
@@ -106,6 +116,8 @@ interface DeskUI {
   selectedLinkId: string | null;
   fullscreenModuleId: string | null;
   draft: LinkDraft | null;
+  dragPreview: DragPreview | null;
+  setDragPreview(preview: DragPreview | null): void;
   select(moduleId: string | null): void;
   selectLink(linkId: string | null): void;
   setFullscreen(moduleId: string | null): void;
@@ -121,6 +133,7 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
   const [fullscreenModuleId, setFullscreenModuleId] = useState<string | null>(null);
   const [draft, setDraft] = useState<LinkDraft | null>(null);
+  const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
 
   const value = useMemo<DeskUI>(
     () => ({
@@ -128,6 +141,8 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
       selectedLinkId,
       fullscreenModuleId,
       draft,
+      dragPreview,
+      setDragPreview,
       select: (moduleId) => {
         setSelectedModuleId(moduleId);
         setSelectedLinkId(null);
@@ -141,7 +156,7 @@ export function DeskUIProvider({ children }: { children: ReactNode }) {
       moveLink: (x, y) => setDraft((prev) => (prev ? { ...prev, x, y } : prev)),
       endLink: () => setDraft(null),
     }),
-    [selectedModuleId, selectedLinkId, fullscreenModuleId, draft],
+    [selectedModuleId, selectedLinkId, fullscreenModuleId, draft, dragPreview],
   );
 
   return <DeskUIContext.Provider value={value}>{children}</DeskUIContext.Provider>;

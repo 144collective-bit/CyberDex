@@ -1,4 +1,4 @@
-import { Component as ReactComponent, Suspense, memo, useCallback, useRef, useState } from 'react';
+import { Component as ReactComponent, Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { getModuleDefinition } from '../../core/modules/registry';
 import { canConnect } from '../../core/modules/ports';
@@ -13,6 +13,7 @@ import { useActiveDeck } from '../../state/deck';
 import { ModulePorts } from './ModulePorts';
 import { ModuleSettings } from './ModuleSettings';
 import { HEADER_HEIGHT } from './geometry';
+import { computeSnap, findSwapTarget, moduleRect, snapToGrid } from './layout';
 
 /** One broken module must never take the deck down with it. */
 class ModuleErrorBoundary extends ReactComponent<{ name: string; children: ReactNode }, { error: Error | null }> {
@@ -44,11 +45,16 @@ interface DragState {
   pointerId: number;
   startX: number;
   startY: number;
+  /** Desk scroll at gesture start, so edge auto-scroll is accounted for. */
+  startScrollLeft: number;
+  startScrollTop: number;
   originX: number;
   originY: number;
   mode: 'move' | 'resize-se' | 'resize-e' | 'resize-s';
   originW: number;
   originH: number;
+  /** Set when the gesture is abandoned, so release restores the original slot. */
+  cancelled?: boolean;
 }
 
 function ModuleFrameInner({ moduleId }: { moduleId: string }) {
@@ -69,10 +75,13 @@ function ModuleFrameInner({ moduleId }: { moduleId: string }) {
       (event.target as HTMLElement).setPointerCapture(event.pointerId);
       actions.raiseModule(module.id);
       ui.select(module.id);
+      const surface = (event.currentTarget as HTMLElement).closest('.desk');
       setDrag({
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
+        startScrollLeft: surface?.scrollLeft ?? 0,
+        startScrollTop: surface?.scrollTop ?? 0,
         originX: module.position.x,
         originY: module.position.y,
         originW: module.size.width,
@@ -83,43 +92,129 @@ function ModuleFrameInner({ moduleId }: { moduleId: string }) {
     [module, actions, ui],
   );
 
+  // Neighbours are the snap and swap candidates; recomputed per gesture, not
+  // per pointer event.
+  const neighbours = useMemo(
+    () => deck.modules.filter((m) => m.id !== moduleId).map((m) => ({ id: m.id, rect: moduleRect(m), locked: m.locked })),
+    [deck.modules, moduleId],
+  );
+
+  /** Latest pointer position, so a scroll can recompute without a pointer event. */
+  const pointerRef = useRef({ x: 0, y: 0 });
+
+  const applyDrag = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!drag || !module || drag.cancelled) return;
+      const surface = nodeRef.current?.closest('.desk');
+      // Scrolling the desk moves the canvas under a stationary pointer, so the
+      // scroll delta counts as movement too.
+      const scrollDx = (surface?.scrollLeft ?? 0) - drag.startScrollLeft;
+      const scrollDy = (surface?.scrollTop ?? 0) - drag.startScrollTop;
+      const dx = clientX - drag.startX + scrollDx;
+      const dy = clientY - drag.startY + scrollDy;
+
+      if (drag.mode !== 'move') {
+        setOffset({
+          dx: 0,
+          dy: 0,
+          dw: drag.mode === 'resize-s' ? 0 : dx,
+          dh: drag.mode === 'resize-e' ? 0 : dy,
+        });
+        return;
+      }
+
+      // Track locally while dragging and commit once on release, so the store
+      // (and persistence, and undo) sees one update rather than one per event.
+      setOffset({ dx, dy, dw: 0, dh: 0 });
+
+      const raw = {
+        x: Math.max(0, drag.originX + dx),
+        y: Math.max(0, drag.originY + dy),
+        width: module.size.width,
+        height: module.collapsed ? HEADER_HEIGHT : module.size.height,
+      };
+      const snapped = computeSnap(raw, neighbours.map((n) => n.rect), {
+        grid: deck.settings.gridSize,
+        snapToGrid: deck.settings.snapToGrid,
+      });
+      const swapTargetId = findSwapTarget(raw, neighbours);
+
+      ui.setDragPreview({
+        moduleId: module.id,
+        rect: { x: snapped.x, y: snapped.y, width: raw.width, height: raw.height },
+        guides: swapTargetId ? [] : snapped.guides,
+        swapTargetId,
+      });
+    },
+    [drag, module, neighbours, deck.settings.gridSize, deck.settings.snapToGrid, ui],
+  );
+
   const onPointerMove = useCallback(
     (event: React.PointerEvent) => {
       if (!drag || event.pointerId !== drag.pointerId) return;
-      const dx = event.clientX - drag.startX;
-      const dy = event.clientY - drag.startY;
-      // Track locally while dragging; commit once on release so the store (and
-      // persistence) sees one update rather than one per pointer event.
-      setOffset(
-        drag.mode === 'move'
-          ? { dx, dy, dw: 0, dh: 0 }
-          : {
-              dx: 0,
-              dy: 0,
-              dw: drag.mode === 'resize-s' ? 0 : dx,
-              dh: drag.mode === 'resize-e' ? 0 : dy,
-            },
-      );
+      pointerRef.current = { x: event.clientX, y: event.clientY };
+      applyDrag(event.clientX, event.clientY);
     },
-    [drag],
+    [drag, applyDrag],
   );
+
+  // Auto-scroll fires without pointer movement; keep the module under the cursor.
+  useEffect(() => {
+    if (!drag || drag.mode !== 'move') return;
+    const surface = nodeRef.current?.closest('.desk');
+    if (!surface) return;
+    const onScroll = () => applyDrag(pointerRef.current.x, pointerRef.current.y);
+    surface.addEventListener('scroll', onScroll);
+    return () => surface.removeEventListener('scroll', onScroll);
+  }, [drag, applyDrag]);
 
   const endDrag = useCallback(
     (event: React.PointerEvent) => {
       if (!drag || !module || event.pointerId !== drag.pointerId) return;
-      if (drag.mode === 'move') {
-        actions.moveModule(module.id, { x: drag.originX + offset.dx, y: drag.originY + offset.dy });
-      } else {
-        actions.resizeModule(module.id, {
-          width: drag.originW + offset.dw,
-          height: drag.originH + offset.dh,
-        });
-      }
+      const preview = ui.dragPreview;
+      ui.setDragPreview(null);
       setDrag(null);
       setOffset({ dx: 0, dy: 0, dw: 0, dh: 0 });
+      // A cancelled gesture (Escape, pointer cancel) leaves the module exactly
+      // where it started.
+      if (drag.cancelled) return;
+
+      if (drag.mode === 'move') {
+        if (preview?.swapTargetId) {
+          actions.swapModules(module.id, preview.swapTargetId);
+          return;
+        }
+        const target = preview?.rect ?? {
+          x: drag.originX + offset.dx,
+          y: drag.originY + offset.dy,
+        };
+        // Guide-aligned drops are exact; everything else goes through the grid.
+        actions.moveModule(module.id, { x: target.x, y: target.y }, true);
+        return;
+      }
+
+      actions.resizeModule(module.id, {
+        width: snapToGrid(drag.originW + offset.dw, deck.settings.gridSize, deck.settings.snapToGrid),
+        height: snapToGrid(drag.originH + offset.dh, deck.settings.gridSize, deck.settings.snapToGrid),
+      });
     },
-    [drag, module, actions, offset],
+    [drag, module, actions, offset, ui, deck.settings.gridSize, deck.settings.snapToGrid],
   );
+
+  // Escape abandons an in-flight drag; the pointer is still down, so the
+  // gesture is marked and the release below restores the original position.
+  useEffect(() => {
+    if (!drag) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setDrag((prev) => (prev ? { ...prev, cancelled: true } : prev));
+      setOffset({ dx: 0, dy: 0, dw: 0, dh: 0 });
+      ui.setDragPreview(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drag, ui]);
 
   if (!module) return null;
   const definition = getModuleDefinition(module.type);
@@ -190,6 +285,7 @@ function ModuleFrameInner({ moduleId }: { moduleId: string }) {
       data-locked={module.locked}
       data-fullscreen={fullscreen}
       data-linking-dim={dimmed}
+      data-swap-target={ui.dragPreview?.swapTargetId === module.id ? 'true' : undefined}
       data-mobile-size={module.mobileSize}
       style={{
         left: module.position.x + offset.dx,

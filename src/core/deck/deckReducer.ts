@@ -28,7 +28,8 @@ export type DeckAction =
   | { type: 'MODULE/ADD'; deckId: string; moduleType: string; overrides?: Partial<ModuleInstance> }
   | { type: 'MODULE/INSERT'; deckId: string; module: ModuleInstance }
   | { type: 'MODULE/REMOVE'; deckId: string; moduleId: string }
-  | { type: 'MODULE/MOVE'; deckId: string; moduleId: string; position: ModulePosition }
+  | { type: 'MODULE/MOVE'; deckId: string; moduleId: string; position: ModulePosition; exact?: boolean }
+  | { type: 'MODULE/SWAP'; deckId: string; moduleId: string; targetId: string }
   | { type: 'MODULE/RESIZE'; deckId: string; moduleId: string; size: ModuleSize }
   | { type: 'MODULE/PATCH'; deckId: string; moduleId: string; patch: Partial<ModuleInstance> }
   | { type: 'MODULE/CONFIG'; deckId: string; moduleId: string; patch: Record<string, unknown> }
@@ -178,10 +179,14 @@ export function deckReducer(state: WorkspaceState, action: DeckAction): Workspac
         const target = deck.modules.find((m) => m.id === action.moduleId);
         if (!target || target.locked) return null;
         const { snapToGrid, gridSize } = deck.settings;
-        const position = {
-          x: Math.max(0, snap(action.position.x, gridSize, snapToGrid)),
-          y: Math.max(0, snap(action.position.y, gridSize, snapToGrid)),
-        };
+        // `exact` means the caller already resolved the position (alignment
+        // guides, keyboard nudge) and grid quantisation would undo that work.
+        const position = action.exact
+          ? { x: Math.max(0, Math.round(action.position.x)), y: Math.max(0, Math.round(action.position.y)) }
+          : {
+              x: Math.max(0, snap(action.position.x, gridSize, snapToGrid)),
+              y: Math.max(0, snap(action.position.y, gridSize, snapToGrid)),
+            };
         if (position.x === target.position.x && position.y === target.position.y) return null;
         return {
           ...deck,
@@ -204,6 +209,28 @@ export function deckReducer(state: WorkspaceState, action: DeckAction): Workspac
         return {
           ...deck,
           modules: deck.modules.map((m) => (m.id === action.moduleId ? { ...m, size } : m)),
+        };
+      });
+
+    case 'MODULE/SWAP':
+      return mapDeck(state, action.deckId, (deck) => {
+        const a = deck.modules.find((m) => m.id === action.moduleId);
+        const b = deck.modules.find((m) => m.id === action.targetId);
+        // A locked module holds its slot; swapping it would defeat the lock.
+        if (!a || !b || a.id === b.id || a.locked || b.locked) return null;
+        // Each module keeps its own minimum: a small module taking a large slot
+        // must not be stored below the size it can actually render at.
+        const fit = (module: ModuleInstance, size: ModuleSize): ModuleSize => {
+          const min = getModuleDefinition(module.type)?.minSize ?? { width: 160, height: 120 };
+          return { width: Math.max(min.width, size.width), height: Math.max(min.height, size.height) };
+        };
+        return {
+          ...deck,
+          modules: deck.modules.map((m) => {
+            if (m.id === a.id) return { ...m, position: { ...b.position }, size: fit(a, b.size) };
+            if (m.id === b.id) return { ...m, position: { ...a.position }, size: fit(b, a.size) };
+            return m;
+          }),
         };
       });
 

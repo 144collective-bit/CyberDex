@@ -502,7 +502,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .module:hover,
 .module:focus-within { border-color: var(--border-strong); z-index: var(--z-module-active); }
 .module[data-selected='true'] { border-color: var(--accent-dim); box-shadow: var(--glow), var(--shadow-panel); z-index: var(--z-module-active); }
-.module[data-dragging='true'] { opacity: 0.92; z-index: var(--z-module-active); box-shadow: var(--shadow-float); }
+.module[data-dragging='true'] {
+  opacity: 0.7;
+  z-index: var(--z-module-active);
+  box-shadow: var(--shadow-float);
+  cursor: grabbing;
+}
+.module[data-dragging='true'] .module-head { cursor: grabbing; }
 .module[data-linking-target='true'] { border-color: var(--accent); box-shadow: var(--glow); }
 .module[data-linking-dim='true'] { opacity: 0.35; }
 .module[data-collapsed='true'] { height: auto !important; }
@@ -611,6 +617,75 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .link-flow { fill: none; stroke: var(--link-active); stroke-width: 1.4; stroke-dasharray: 3 9; opacity: 0.75; animation: dash 1.6s linear infinite; }
 .link-hit { fill: none; stroke: transparent; stroke-width: 10; pointer-events: stroke; cursor: pointer; }
 .link-draft { stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 4 4; fill: none; }
+
+/* ---- drag feedback ---- */
+.align-guide {
+  position: absolute;
+  z-index: calc(var(--z-overlay) - 1);
+  pointer-events: none;
+  background: var(--accent);
+  box-shadow: 0 0 10px 1px var(--accent);
+}
+.align-guide[data-orientation='v'] { width: 1px; }
+.align-guide[data-orientation='h'] { height: 1px; }
+/* End caps make a guide readable against a busy deck. */
+.align-guide::before,
+.align-guide::after {
+  content: '';
+  position: absolute;
+  background: var(--accent);
+}
+.align-guide[data-orientation='v']::before,
+.align-guide[data-orientation='v']::after {
+  left: -3px; width: 7px; height: 1px;
+}
+.align-guide[data-orientation='v']::before { top: 0; }
+.align-guide[data-orientation='v']::after { bottom: 0; }
+.align-guide[data-orientation='h']::before,
+.align-guide[data-orientation='h']::after {
+  top: -3px; height: 7px; width: 1px;
+}
+.align-guide[data-orientation='h']::before { left: 0; }
+.align-guide[data-orientation='h']::after { right: 0; }
+
+.drop-slot {
+  position: absolute;
+  z-index: calc(var(--z-module) - 1);
+  pointer-events: none;
+  border: 1px dashed var(--accent-dim);
+  background: var(--accent-wash);
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+}
+.drop-slot[data-swap='true'] {
+  border-style: solid;
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+}
+.drop-slot-label {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wider);
+  color: var(--accent);
+}
+
+/* The module a drop would exchange places with. */
+.module[data-swap-target='true'] {
+  border-color: var(--accent);
+  box-shadow: var(--glow), var(--shadow-panel);
+}
+.module[data-swap-target='true']::after {
+  content: 'SWAP';
+  position: absolute;
+  inset: auto var(--space-3) var(--space-3) auto;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-size: var(--text-3xs);
+  letter-spacing: var(--tracking-wider);
+  pointer-events: none;
+}
 
 /* ===================== overlays ===================== */
 

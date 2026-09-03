@@ -206,6 +206,25 @@ export function SystemProvider({ system, children }: { system: System; children:
     };
   }, [system]);
 
+  // The workspace write is debounced, so a tab closing or backgrounding within
+  // that window would lose the last edit. Flush on the way out.
+  useEffect(() => {
+    const flush = () => {
+      if (system.workspace.hasPendingWrite()) void system.workspace.flush();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [system]);
+
   // Keep global chain + demo flag in step with the wallet the user picked.
   useEffect(
     () =>

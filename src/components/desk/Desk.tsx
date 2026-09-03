@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useActiveDeck, useDeckActions, useDeckModuleIds, useDeskUI } from '../../state/deck';
 import { useSystem } from '../../state/system';
+import { DragOverlay } from './DragOverlay';
 import { LinkLayer } from './LinkLayer';
 import { ModuleFrame } from './ModuleFrame';
 import type { Point } from './geometry';
@@ -68,11 +69,72 @@ export function Desk({ onAddModule }: { onAddModule: () => void }) {
     [system],
   );
 
+  // Dragging toward the edge of the viewport scrolls the desk, so a module can
+  // be moved somewhere that is not currently on screen.
+  const preview = ui.dragPreview;
+  useEffect(() => {
+    if (!preview) return;
+    const surface = canvasRef.current?.parentElement;
+    if (!surface) return;
+    let frame = 0;
+    let pointer = { x: 0, y: 0 };
+    const onMove = (event: PointerEvent) => {
+      pointer = { x: event.clientX, y: event.clientY };
+    };
+    const step = () => {
+      const rect = surface.getBoundingClientRect();
+      const margin = 64;
+      const speed = 16;
+      let dx = 0;
+      let dy = 0;
+      if (pointer.x > 0) {
+        if (pointer.x - rect.left < margin) dx = -speed;
+        else if (rect.right - pointer.x < margin) dx = speed;
+        if (pointer.y - rect.top < margin) dy = -speed;
+        else if (rect.bottom - pointer.y < margin) dy = speed;
+      }
+      if (dx || dy) surface.scrollBy(dx, dy);
+      frame = requestAnimationFrame(step);
+    };
+    window.addEventListener('pointermove', onMove);
+    frame = requestAnimationFrame(step);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      cancelAnimationFrame(frame);
+    };
+  }, [preview]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Delete' && event.key !== 'Backspace') return;
       const target = event.target as HTMLElement | null;
-      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+      const typing = target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+
+      // Arrow keys nudge the selected module: one grid step, or one pixel with
+      // Shift. Deck editing should never require a mouse.
+      if (!typing && ui.selectedModuleId && event.key.startsWith('Arrow')) {
+        const module = deck.modules.find((m) => m.id === ui.selectedModuleId);
+        if (module && !module.locked) {
+          event.preventDefault();
+          const step = event.shiftKey ? 1 : deck.settings.gridSize;
+          const delta = {
+            ArrowLeft: { x: -step, y: 0 },
+            ArrowRight: { x: step, y: 0 },
+            ArrowUp: { x: 0, y: -step },
+            ArrowDown: { x: 0, y: step },
+          }[event.key];
+          if (delta) {
+            actions.moveModule(
+              module.id,
+              { x: module.position.x + delta.x, y: module.position.y + delta.y },
+              true,
+            );
+          }
+          return;
+        }
+      }
+
+      if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+      if (typing) return;
       if (ui.selectedLinkId) {
         actions.disconnect(ui.selectedLinkId);
         ui.selectLink(null);
@@ -83,7 +145,7 @@ export function Desk({ onAddModule }: { onAddModule: () => void }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [ui, actions]);
+  }, [ui, actions, deck.modules, deck.settings.gridSize]);
 
   return (
     <div
@@ -102,6 +164,7 @@ export function Desk({ onAddModule }: { onAddModule: () => void }) {
         style={{ width: canvasSize.width, height: canvasSize.height }}
       >
         <LinkLayer deck={deck} draftPoint={draftPoint} />
+        <DragOverlay />
         {moduleIds.map((id) => (
           <ModuleFrame key={id} moduleId={id} />
         ))}

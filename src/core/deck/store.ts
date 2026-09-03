@@ -195,6 +195,11 @@ export class WorkspaceStore {
     return true;
   }
 
+  /** True while a debounced write is still outstanding. */
+  hasPendingWrite(): boolean {
+    return this.persistTimer !== null;
+  }
+
   private schedulePersist(): void {
     if (this.persistTimer) clearTimeout(this.persistTimer);
     this.persistTimer = setTimeout(() => {

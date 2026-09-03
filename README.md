@@ -135,6 +135,24 @@ keys are backfilled from the current definition).
 
 Templates: **GENESIS · TRADER · PORTFOLIO · HEX COMMAND · WHALE HUNTER · BALANCE CIRCUIT**.
 
+## Moving modules
+
+Dragging a module by its header is the primary way a deck gets built, so the gesture is
+deliberate about what it does:
+
+- **Alignment guides.** While dragging, edges and centres snap magnetically to nearby
+  modules (left↔left, right↔right, centre↔centre, and flush against an edge) and the
+  matching guide line is drawn. Out in open space it falls back to the deck's grid.
+- **Swap.** Dropping a module onto the middle of another exchanges their slots — position
+  and size — with a SWAP marker on the target while you hold it there. The outer fifth of
+  a module is a normal drop zone, so nudging one up against its neighbour never swaps by
+  accident. Links are unaffected; a locked module keeps its slot.
+- **Escape cancels** an in-flight drag and the module returns to where it started.
+- **Arrow keys** nudge the selected module one grid step, or one pixel with Shift.
+- **Edge auto-scroll.** Dragging toward the edge scrolls the desk, and the module keeps
+  tracking the cursor as the canvas moves under it.
+- Every completed drag, swap or nudge is one undo step.
+
 ## Controls and keyboard
 
 Every control in the app comes from one small set: `Button` / `IconButton`, `Segmented`
