@@ -1,12 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { EventBus, systemBus } from '../core/events/bus';
 import { WorkspaceStore } from '../core/deck/store';
 import { moduleRuntime } from '../core/modules/runtime';
 import { createDefaultAdapter } from '../core/storage/LocalStorageAdapter';
+import type { StorageFailure } from '../core/storage/LocalStorageAdapter';
 import type { PersistenceAdapter } from '../core/storage/PersistenceAdapter';
 import { STORAGE_KEYS } from '../core/storage/PersistenceAdapter';
-import type { GasSnapshot, ServiceHealth, SystemStatus } from '../core/types';
+import { TelemetryService } from '../services/telemetry/TelemetryService';
 import type { ChainProvider } from '../services/chain/ChainProvider';
 import { DemoChainProvider } from '../services/chain/DemoChainProvider';
 import { EvmChainProvider } from '../services/chain/EvmChainProvider';
@@ -38,6 +39,7 @@ export interface System {
   notifications: NotificationCenter;
   global: GlobalContextStore;
   workspace: WorkspaceStore;
+  telemetry: TelemetryService;
   runtime: typeof moduleRuntime;
   /** Chain access for a given chain — live when an injected wallet is active. */
   chainFor(chainId: number): ChainProvider;
@@ -45,7 +47,18 @@ export interface System {
 
 export function createSystem(options: { storage?: PersistenceAdapter; bus?: EventBus } = {}): System {
   const bus = options.bus ?? systemBus;
-  const storage = options.storage ?? createDefaultAdapter();
+  // Storage problems must reach the user, so failures are routed to the bus the
+  // notification centre already listens on.
+  const reportStorageFailure = (failure: StorageFailure) =>
+    bus.emit(
+      'SYSTEM_NOTICE',
+      {
+        level: 'error',
+        message: `SAVE FAILED — ${failure.message} Changes are kept for this session only.`,
+      },
+      'storage',
+    );
+  const storage = options.storage ?? createDefaultAdapter(reportStorageFailure);
 
   const market = new DemoMarketDataProvider();
   const routing = new RoutingEngine();
@@ -128,6 +141,23 @@ export function createSystem(options: { storage?: PersistenceAdapter; bus?: Even
     return chain;
   };
 
+  const telemetry = new TelemetryService({ chainFor, market, routing, bus });
+
+  // Alert modules own a rule each; when their module goes (deleted, or its deck
+  // deleted) the rule must go with it rather than firing into the void.
+  let pruneTimer: ReturnType<typeof setTimeout> | null = null;
+  workspace.subscribe(() => {
+    if (pruneTimer) clearTimeout(pruneTimer);
+    pruneTimer = setTimeout(() => {
+      pruneTimer = null;
+      const live = new Set<string>();
+      for (const deck of workspace.getState().decks) {
+        for (const module of deck.modules) live.add(module.id);
+      }
+      alerts.pruneOrphans(live);
+    }, 500);
+  });
+
   return {
     bus,
     storage,
@@ -141,6 +171,7 @@ export function createSystem(options: { storage?: PersistenceAdapter; bus?: Even
     notifications,
     global,
     workspace,
+    telemetry,
     runtime: moduleRuntime,
     chainFor,
   };
@@ -248,51 +279,36 @@ export function useAlertRules() {
   return useStoreSelector(system.alerts, (s) => s);
 }
 
-/** Gas + block + service health, polled at one shared interval. */
-export function useNetworkTelemetry(chainId: number, intervalMs = 12_000) {
+/**
+ * Gas, block and service health for a chain.
+ *
+ * Every caller shares one poller inside TelemetryService, so adding a second
+ * Gas module costs nothing in RPC traffic.
+ */
+export function useNetworkTelemetry(chainId: number) {
   const system = useSystem();
-  const [gas, setGas] = useState<GasSnapshot | null>(null);
-  const [status, setStatus] = useState<SystemStatus>({
-    rpc: 'unknown',
-    indexer: 'unknown',
-    router: 'unknown',
-    lastCheck: 0,
-  });
-  const busRef = useRef(system.bus);
 
-  useEffect(() => {
-    let cancelled = false;
-    const chain = system.chainFor(chainId);
-
-    const poll = async () => {
-      try {
-        const snapshot = await chain.getGas();
-        if (cancelled) return;
-        setGas(snapshot);
-        busRef.current.emit('GAS_UPDATED', { gas: snapshot }, 'telemetry');
-        const [rpc, indexer] = await Promise.all([chain.health(), system.market.health()]);
-        if (cancelled) return;
-        setStatus({
-          rpc,
-          indexer,
-          router: system.routing.list(chainId).length > 0 ? 'online' : ('offline' as ServiceHealth),
-          lastCheck: Date.now(),
-        });
-      } catch {
-        if (!cancelled) {
-          setStatus((prev) => ({ ...prev, rpc: 'offline', lastCheck: Date.now() }));
-        }
-      }
-    };
-
-    void poll();
-    const timer = setInterval(poll, intervalMs);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [system, chainId, intervalMs]);
+  const subscribe = useCallback(
+    (listener: () => void) => system.telemetry.subscribe(chainId, listener),
+    [system, chainId],
+  );
+  const getSnapshot = useCallback(() => system.telemetry.getSnapshot(chainId), [system, chainId]);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const network = useMemo(() => NETWORKS[chainId] ?? null, [chainId]);
-  return { gas, status, network };
+  return { gas: snapshot.gas, status: snapshot.status, error: snapshot.error, network };
+}
+
+/** Undo/redo availability, kept in sync with the workspace store. */
+export function useHistoryDepth() {
+  const system = useSystem();
+  const subscribe = useCallback((listener: () => void) => system.workspace.subscribe(listener), [system]);
+  const getSnapshot = useCallback(() => system.workspace.getHistoryDepth(), [system]);
+  const cache = useRef(getSnapshot());
+  const stable = useCallback(() => {
+    const next = getSnapshot();
+    if (next.past !== cache.current.past || next.future !== cache.current.future) cache.current = next;
+    return cache.current;
+  }, [getSnapshot]);
+  return useSyncExternalStore(subscribe, stable, stable);
 }

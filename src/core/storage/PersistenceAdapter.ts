@@ -7,6 +7,11 @@
  */
 export interface PersistenceAdapter {
   readonly id: string;
+  /**
+   * True once writes stopped reaching durable storage. Callers must not report
+   * a successful save while this is set.
+   */
+  readonly degraded?: boolean;
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T): Promise<void>;
   remove(key: string): Promise<void>;

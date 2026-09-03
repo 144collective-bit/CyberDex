@@ -9,7 +9,7 @@ export function StatusBar() {
   const system = useSystem();
   const deck = useActiveDeck();
   const [global] = useGlobalContext();
-  const { status, gas } = useNetworkTelemetry(global.chainId);
+  const { status, gas, error } = useNetworkTelemetry(global.chainId);
   const [last, setLast] = useState<EventRecord | null>(null);
 
   useEffect(() => system.bus.onAny((record) => setLast(record)), [system]);
@@ -33,6 +33,11 @@ export function StatusBar() {
         {deck.modules.length} MODULES · {deck.connections.length} LINKS
       </span>
       <span className="grow" />
+      {error ? (
+        <span className="down" title={error}>
+          RPC ERROR
+        </span>
+      ) : null}
       {last ? (
         <span className="truncate" style={{ maxWidth: '40vw' }}>
           {formatTime(last.at)} · {last.type} · {last.origin}

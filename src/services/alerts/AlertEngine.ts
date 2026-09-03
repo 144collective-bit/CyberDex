@@ -17,6 +17,8 @@ export type AlertConditionType =
 export interface AlertRule {
   id: string;
   name: string;
+  /** Module that owns this rule, when it was created by one. */
+  ownerModuleId?: string | null;
   type: AlertConditionType;
   /** What the value describes: a token symbol, pair label, or wallet label. */
   subject: string;
@@ -41,6 +43,7 @@ export function createAlertRule(input: Partial<AlertRule> & { name: string; type
   return {
     id: input.id ?? `alt_${Date.now().toString(36)}_${(seq++).toString(36)}`,
     name: input.name,
+    ownerModuleId: input.ownerModuleId ?? null,
     type: input.type,
     subject: input.subject,
     threshold: input.threshold,
@@ -130,6 +133,31 @@ export class AlertEngine {
 
   get(id: string): AlertRule | undefined {
     return this.rules.find((rule) => rule.id === id);
+  }
+
+  /**
+   * Drop rules whose owning module no longer exists.
+   *
+   * Alert modules register a rule when they mount, and without this a deleted
+   * module leaves a rule behind that keeps firing notifications with nothing
+   * behind it. Rules created from the Alerts page have no owner and are never
+   * pruned.
+   */
+  pruneOrphans(liveModuleIds: Set<string>): string[] {
+    const orphans = this.rules.filter(
+      (rule) => rule.ownerModuleId != null && !liveModuleIds.has(rule.ownerModuleId),
+    );
+    if (!orphans.length) return [];
+    const removed = orphans.map((rule) => rule.id);
+    this.rules = this.rules.filter((rule) => !removed.includes(rule.id));
+    this.persist();
+    this.emit();
+    return removed;
+  }
+
+  /** Rules owned by a specific module. */
+  ownedBy(moduleId: string): AlertRule[] {
+    return this.rules.filter((rule) => rule.ownerModuleId === moduleId);
   }
 
   /** Push a value at one rule. Returns whether it fired. */

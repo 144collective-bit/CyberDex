@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from '../core/storage/PersistenceAdapter';
+import { LocalStorageAdapter } from '../core/storage/LocalStorageAdapter';
 import { useActiveDeck, useDeckActions } from '../state/deck';
 import { useGlobalContext, useSystem } from '../state/system';
 import { Button } from '../components/ui/Button';
@@ -96,7 +97,18 @@ export function SettingsPage() {
         <div className="col" style={{ gap: 'var(--space-3)', fontSize: 'var(--text-3xs)' }}>
           <div className="spread">
             <span className="faint">STORAGE ADAPTER</span>
-            <span className="mono-num">{system.storage.id}</span>
+            <span className="mono-num">
+              {system.storage.id}
+              {system.storage instanceof LocalStorageAdapter && system.storage.degraded ? (
+                <span className="chip" data-tone="error" style={{ marginLeft: 6 }}>
+                  DEGRADED — SESSION ONLY
+                </span>
+              ) : system.storage.id === 'memory' ? (
+                <span className="chip" data-tone="warning" style={{ marginLeft: 6 }}>
+                  SESSION ONLY
+                </span>
+              ) : null}
+            </span>
           </div>
           <div className="spread">
             <span className="faint">MARKET PROVIDER</span>

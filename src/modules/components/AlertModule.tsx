@@ -55,11 +55,13 @@ export function Component({ module }: { module: ModuleInstance }) {
         type: config.condition,
         subject: module.name,
         threshold: config.threshold,
+        // Ownership lets the engine clean up if this module is deleted.
+        ownerModuleId: module.id,
       }),
     );
     ruleIdRef.current = rule.id;
     setConfig({ ruleId: rule.id });
-  }, [system, config.label, config.condition, config.threshold, module.name, setConfig]);
+  }, [system, config.label, config.condition, config.threshold, module.name, module.id, setConfig]);
 
   useEffect(() => {
     const ruleId = ruleIdRef.current;

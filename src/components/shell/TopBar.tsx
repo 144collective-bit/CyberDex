@@ -7,6 +7,7 @@ import { useActiveDeck, useDeckDispatch, useDeckList } from '../../state/deck';
 import {
   useActiveWallet,
   useGlobalContext,
+  useHistoryDepth,
   useNetworkTelemetry,
   useNotifications,
   useSystem,
@@ -42,6 +43,7 @@ export function TopBar({
   const [global, globalStore] = useGlobalContext();
   const { gas } = useNetworkTelemetry(global.chainId);
   const notifications = useNotifications();
+  const history = useHistoryDepth();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -72,6 +74,25 @@ export function TopBar({
         onSelect: () => dispatch({ type: 'DECK/ACTIVATE', deckId: item.id }),
       }),
     ),
+    { id: 'sep0', kind: 'separator' },
+    {
+      id: 'undo',
+      label: 'Undo',
+      hint: '⌘Z',
+      icon: '↩',
+      disabled: history.past === 0,
+      keepOpen: true,
+      onSelect: () => system.workspace.undo(),
+    },
+    {
+      id: 'redo',
+      label: 'Redo',
+      hint: '⇧⌘Z',
+      icon: '↪',
+      disabled: history.future === 0,
+      keepOpen: true,
+      onSelect: () => system.workspace.redo(),
+    },
     { id: 'sep1', kind: 'separator' },
     {
       id: 'new',

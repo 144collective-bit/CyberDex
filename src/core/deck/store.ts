@@ -21,6 +21,18 @@ interface PersistedWorkspace {
  * move re-renders that module rather than the whole deck. Writes are debounced
  * into the persistence adapter.
  */
+/** Actions that only change what you are looking at, so they never enter history. */
+const NON_UNDOABLE = new Set<DeckAction['type']>(['ERROR/CLEAR', 'DECK/ACTIVATE', 'MODULE/RAISE']);
+
+const HISTORY_LIMIT = 60;
+/** Repeated edits to the same target within this window collapse into one step. */
+const COALESCE_MS = 700;
+
+export interface HistoryDepth {
+  past: number;
+  future: number;
+}
+
 export class WorkspaceStore {
   private state: WorkspaceState;
   private listeners = new Set<() => void>();
@@ -28,6 +40,10 @@ export class WorkspaceStore {
   private bus: EventBus;
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
   private persistDelay: number;
+  private past: WorkspaceState[] = [];
+  private future: WorkspaceState[] = [];
+  private lastPushKey: string | null = null;
+  private lastPushAt = 0;
 
   constructor(
     initial: WorkspaceState,
@@ -54,6 +70,7 @@ export class WorkspaceStore {
     const prev = this.state;
     const next = deckReducer(prev, action);
     if (next === prev) return prev;
+    this.remember(action, prev);
     this.state = next;
     this.announce(action, prev, next);
     this.emitChange();
@@ -61,8 +78,67 @@ export class WorkspaceStore {
     return next;
   };
 
+  /**
+   * Snapshot the pre-action state for undo.
+   *
+   * Continuous edits — dragging a slider, typing in a Notes module — would
+   * otherwise push one entry per keystroke, so consecutive edits to the same
+   * target inside a short window replace the previous snapshot instead.
+   */
+  private remember(action: DeckAction, prev: WorkspaceState): void {
+    if (NON_UNDOABLE.has(action.type)) return;
+    const key = coalesceKey(action);
+    const now = Date.now();
+    const coalesce = key !== null && key === this.lastPushKey && now - this.lastPushAt < COALESCE_MS;
+
+    this.lastPushKey = key;
+    this.lastPushAt = now;
+    // Any new edit invalidates the redo branch.
+    this.future = [];
+    if (coalesce && this.past.length) return;
+
+    this.past.push(prev);
+    if (this.past.length > HISTORY_LIMIT) this.past.shift();
+  }
+
+  getHistoryDepth = (): HistoryDepth => ({ past: this.past.length, future: this.future.length });
+
+  canUndo = (): boolean => this.past.length > 0;
+
+  canRedo = (): boolean => this.future.length > 0;
+
+  /** Step back one edit. Returns false when there is nothing to undo. */
+  undo(): boolean {
+    const previous = this.past.pop();
+    if (!previous) return false;
+    this.future.push(this.state);
+    this.state = previous;
+    this.lastPushKey = null;
+    this.emitChange();
+    this.schedulePersist();
+    return true;
+  }
+
+  redo(): boolean {
+    const next = this.future.pop();
+    if (!next) return false;
+    this.past.push(this.state);
+    this.state = next;
+    this.lastPushKey = null;
+    this.emitChange();
+    this.schedulePersist();
+    return true;
+  }
+
+  clearHistory(): void {
+    this.past = [];
+    this.future = [];
+    this.lastPushKey = null;
+  }
+
   /** Replace the whole workspace (used by hydration and import-all). */
   replace(next: WorkspaceState, persist = true): void {
+    this.clearHistory();
     this.state = next;
     this.emitChange();
     if (persist) this.schedulePersist();
@@ -88,8 +164,14 @@ export class WorkspaceStore {
     return true;
   }
 
-  /** Force an immediate write; returns once the adapter has accepted it. */
-  async flush(): Promise<void> {
+  /**
+   * Force an immediate write.
+   *
+   * Returns whether the deck actually reached durable storage — a degraded
+   * adapter keeps the session alive in memory, and callers must not claim a
+   * save that did not happen.
+   */
+  async flush(): Promise<boolean> {
     if (this.persistTimer) {
       clearTimeout(this.persistTimer);
       this.persistTimer = null;
@@ -101,7 +183,16 @@ export class WorkspaceStore {
     };
     await this.adapter.set(STORAGE_KEYS.workspace, payload);
     const deck = this.getActiveDeck();
+    if (this.adapter.degraded) {
+      this.bus.emit(
+        'SYSTEM_NOTICE',
+        { level: 'warning', message: 'DECK HELD IN MEMORY — storage is unavailable, this session only.' },
+        'workspace-store',
+      );
+      return false;
+    }
     if (deck) this.bus.emit('DECK_SAVED', { deckId: deck.id, name: deck.name }, 'workspace-store');
+    return true;
   }
 
   private schedulePersist(): void {
@@ -178,4 +269,27 @@ function deckConnections(state: WorkspaceState, deckId: string) {
 }
 function deckConnectionIds(state: WorkspaceState, deckId: string) {
   return deckConnections(state, deckId).map((c) => c.id);
+}
+
+/**
+ * Identity of the thing an action edits, for coalescing. Null means the action
+ * always gets its own history entry.
+ */
+function coalesceKey(action: DeckAction): string | null {
+  switch (action.type) {
+    case 'MODULE/CONFIG':
+      return `config:${action.moduleId}:${Object.keys(action.patch).sort().join(',')}`;
+    case 'MODULE/MOVE':
+      return `move:${action.moduleId}`;
+    case 'MODULE/RESIZE':
+      return `resize:${action.moduleId}`;
+    case 'DECK/RENAME':
+      return `rename:${action.deckId}`;
+    case 'DECK/SETTINGS':
+      return `settings:${action.deckId}:${Object.keys(action.patch).sort().join(',')}`;
+    case 'MODULE/PATCH':
+      return `patch:${action.moduleId}:${Object.keys(action.patch).sort().join(',')}`;
+    default:
+      return null;
+  }
 }

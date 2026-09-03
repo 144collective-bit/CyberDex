@@ -77,12 +77,20 @@ Modules publish and subscribe by name (`PAIR_CHANGED`, `QUOTE_UPDATED`,
 `TRANSACTION_CONFIRMED`, `ALERT_TRIGGERED`…). The bus keeps a bounded history, which is
 what the Activity Log module and the status bar read.
 
-### Rendering cost
+### Polling and rendering cost
 
 A module subscribes only to the upstream modules it is linked to, through
 `ModuleRuntime` + `useSyncExternalStore`. A price tick re-renders the price module and its
 subscribers — not the deck. Module components are code-split: each ships as its own chunk
 and loads when a deck first places it.
+
+Network telemetry (gas, block, RPC/indexer/router health) runs through `TelemetryService`:
+one poller per chain, started by the first subscriber and stopped by the last, no matter
+how many modules and chrome elements display it. Adding a second Gas module costs nothing.
+
+Persistence is honest about failure. If a write is rejected — quota exhausted, private
+browsing — the adapter reports it, keeps the session alive in memory, and the UI says so;
+a save that did not reach storage is never announced as saved.
 
 ## Modules (24)
 
@@ -142,9 +150,17 @@ data attributes against design tokens, so themes and density need no component c
   route gets a marker bar, not just a colour change.
 
 `⌘/Ctrl + K` command palette · `⌘/Ctrl + M` module library · `⌘/Ctrl + S` save deck ·
-`⌘/Ctrl + D` new deck · `Delete` remove selected module or link · `Esc` close.
+`⌘/Ctrl + D` new deck · `⌘/Ctrl + Z` undo · `⇧⌘/Ctrl + Z` redo ·
+`Delete` remove selected module or link · `Esc` close.
 
-## Tests
+Undo covers every deck edit — deleting a module restores it with all of its links.
+Continuous edits (typing in Notes, dragging a module) collapse into one step, and
+switching deck or raising a module is not treated as an edit.
+
+## Tests and CI
+
+`.github/workflows/ci.yml` runs typecheck, tests and the production build on every push
+and pull request, and writes the per-chunk bundle size into the run summary.
 
 ```
 core       event bus · port compatibility · deck reducer · link graph · runtime store ·
@@ -152,7 +168,8 @@ core       event bus · port compatibility · deck reducer · link graph · runt
 services   routing + trade-safety assessment · execution guards · wallet rules ·
            alert engine · notifications · demo market · portfolio composition
 app        the full MVP workflow (add → link → select pair → quote → review → confirm →
-           feed → reload) and every deck template's wiring
+           feed → reload), every deck template's wiring, undo/redo semantics,
+           telemetry poller sharing, alert-rule ownership, storage degradation
 ```
 
 ## Status

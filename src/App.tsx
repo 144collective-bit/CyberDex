@@ -44,7 +44,20 @@ function Shell() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const meta = event.metaKey || event.ctrlKey;
-      if (meta && event.key.toLowerCase() === 'k') {
+      if (meta && event.key.toLowerCase() === 'z') {
+        const target = event.target as HTMLElement | null;
+        // Let the browser handle undo inside a text field the user is editing.
+        if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
+        event.preventDefault();
+        const done = event.shiftKey ? system.workspace.redo() : system.workspace.undo();
+        if (!done) {
+          system.notifications.push({
+            kind: 'info',
+            title: event.shiftKey ? 'NOTHING TO REDO' : 'NOTHING TO UNDO',
+            ttlMs: 2000,
+          });
+        }
+      } else if (meta && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setPaletteOpen((prev) => !prev);
       } else if (meta && event.key.toLowerCase() === 'm') {
@@ -52,8 +65,10 @@ function Shell() {
         openLibrary();
       } else if (meta && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        void actions.save();
-        system.notifications.push({ kind: 'success', title: 'DECK SAVED' });
+        void actions.save().then((persisted) => {
+          // A degraded adapter raises its own notice; never double-report.
+          if (persisted) system.notifications.push({ kind: 'success', title: 'DECK SAVED' });
+        });
       } else if (meta && event.key.toLowerCase() === 'd') {
         event.preventDefault();
         dispatch({ type: 'DECK/ADD', deck: createDeck('NEW DECK') });
